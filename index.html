@@ -1,0 +1,3154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#08130b">
+<title>farm 3d tractor simulator</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#79b6dc;
+    font-family:Arial,sans-serif;
+    touch-action:none;
+}
+#game{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+}
+canvas{
+    position:absolute;
+    inset:0;
+    display:block;
+    width:100%;
+    height:100%;
+}
+
+#loading{
+    position:fixed;
+    inset:0;
+    z-index:999;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:12px;
+    color:#fff;
+    background:#07140b;
+    font-size:18px;
+    font-weight:900;
+}
+#loading small{
+    color:#9ca3af;
+    font-size:11px;
+    font-weight:500;
+}
+
+#hud{
+    position:fixed;
+    inset:0;
+    z-index:20;
+    pointer-events:none;
+}
+
+#money{
+    position:absolute;
+    left:14px;
+    top:14px;
+    padding:10px 14px;
+    border-radius:15px;
+    color:white;
+    background:rgba(4,15,8,.78);
+    border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 7px 22px rgba(0,0,0,.3);
+    font-size:15px;
+    font-weight:900;
+}
+
+#mission{
+    position:absolute;
+    left:14px;
+    top:62px;
+    padding:8px 11px;
+    max-width:260px;
+    border-radius:12px;
+    color:#d9f99d;
+    background:rgba(4,15,8,.7);
+    border:1px solid rgba(190,242,100,.18);
+    font-size:11px;
+    font-weight:800;
+}
+
+#status{
+    position:absolute;
+    left:50%;
+    top:14px;
+    transform:translateX(-50%);
+    padding:8px 14px;
+    border-radius:13px;
+    color:#fff;
+    background:rgba(4,12,7,.72);
+    border:1px solid rgba(255,255,255,.16);
+    font-size:11px;
+    font-weight:800;
+    white-space:nowrap;
+}
+
+#speed{
+    position:absolute;
+    right:120px;
+    top:22px;
+    color:#fff;
+    background:rgba(4,12,7,.7);
+    padding:8px 10px;
+    border-radius:11px;
+    font-size:11px;
+    font-weight:900;
+}
+
+#gps{
+    position:absolute;
+    top:12px;
+    right:13px;
+    width:94px;
+    height:94px;
+    border-radius:50%;
+    background:
+        radial-gradient(circle,#1c3c2b,#0a1b10 70%);
+    border:3px solid rgba(255,255,255,.48);
+    box-shadow:0 8px 28px rgba(0,0,0,.4);
+    overflow:hidden;
+}
+#gps:before{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:0;
+    width:1px;
+    height:100%;
+    background:rgba(255,255,255,.13);
+}
+#gps:after{
+    content:"";
+    position:absolute;
+    top:50%;
+    left:0;
+    width:100%;
+    height:1px;
+    background:rgba(255,255,255,.13);
+}
+#gpsArrow{
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:4px;
+    height:37px;
+    transform-origin:50% 80%;
+    background:#ef4444;
+    border-radius:5px;
+}
+#gpsArrow:before{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:-8px;
+    transform:translateX(-50%);
+    border-left:8px solid transparent;
+    border-right:8px solid transparent;
+    border-bottom:17px solid #ef4444;
+}
+#gpsText{
+    position:absolute;
+    bottom:4px;
+    left:50%;
+    transform:translateX(-50%);
+    color:#bbf7d0;
+    font-size:7px;
+    font-weight:900;
+}
+
+#mode{
+    position:absolute;
+    left:50%;
+    bottom:126px;
+    transform:translateX(-50%);
+    padding:7px 12px;
+    border-radius:11px;
+    background:rgba(4,12,7,.72);
+    color:#fff;
+    font-size:10px;
+    font-weight:900;
+}
+
+/* camera touch area */
+#cameraTouch{
+    position:absolute;
+    right:0;
+    top:0;
+    width:65%;
+    height:100%;
+    pointer-events:auto;
+    touch-action:none;
+}
+
+/* joystick */
+#joystick{
+    position:absolute;
+    left:18px;
+    bottom:25px;
+    width:130px;
+    height:130px;
+    border-radius:50%;
+    background:rgba(8,18,12,.32);
+    border:2px solid rgba(255,255,255,.18);
+    box-shadow:
+        inset 0 0 25px rgba(255,255,255,.05),
+        0 7px 25px rgba(0,0,0,.25);
+    pointer-events:auto;
+    touch-action:none;
+}
+#stick{
+    position:absolute;
+    width:62px;
+    height:62px;
+    left:34px;
+    top:34px;
+    border-radius:50%;
+    background:
+        radial-gradient(circle at 35% 30%,#738277,#1c2b21);
+    border:2px solid rgba(255,255,255,.32);
+    box-shadow:
+        0 6px 18px rgba(0,0,0,.42),
+        inset 0 2px rgba(255,255,255,.25);
+    pointer-events:none;
+}
+
+/* action buttons */
+#actions{
+    position:absolute;
+    right:17px;
+    bottom:22px;
+    display:flex;
+    align-items:flex-end;
+    gap:10px;
+    pointer-events:auto;
+}
+
+.action{
+    width:59px;
+    height:59px;
+    border:1px solid rgba(255,255,255,.27);
+    border-radius:50%;
+    color:#fff;
+    background:
+        linear-gradient(145deg,rgba(55,70,61,.96),rgba(7,18,11,.96));
+    box-shadow:
+        0 7px 20px rgba(0,0,0,.42),
+        inset 0 2px rgba(255,255,255,.2);
+    font-size:21px;
+    font-weight:900;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    user-select:none;
+    touch-action:none;
+    position:relative;
+    overflow:hidden;
+}
+.action:active,
+.action.active{
+    transform:scale(.93);
+}
+#gas{
+    width:72px;
+    height:72px;
+    background:linear-gradient(145deg,#2e914c,#092914);
+}
+#enter{
+    width:78px;
+    height:50px;
+    border-radius:17px;
+    font-size:10px;
+    text-align:center;
+}
+.ripple{
+    position:absolute;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:rgba(255,255,255,.5);
+    transform:scale(0);
+    animation:ripple .55s ease-out;
+    pointer-events:none;
+}
+@keyframes ripple{
+    to{
+        transform:scale(12);
+        opacity:0;
+    }
+}
+
+#jcbControls{
+    position:absolute;
+    right:17px;
+    bottom:100px;
+    display:none;
+    gap:7px;
+    pointer-events:auto;
+}
+.jcb{
+    width:48px;
+    height:48px;
+    border-radius:15px;
+    border:1px solid rgba(255,255,255,.25);
+    color:#fff;
+    font-size:18px;
+    font-weight:900;
+    background:linear-gradient(145deg,#e3a900,#5b3505);
+    box-shadow:0 6px 15px rgba(0,0,0,.35);
+}
+#dig{
+    background:linear-gradient(145deg,#bd6615,#481a05);
+}
+#dump{
+    background:linear-gradient(145deg,#64748b,#111827);
+}
+
+#help{
+    position:absolute;
+    bottom:5px;
+    left:50%;
+    transform:translateX(-50%);
+    color:rgba(255,255,255,.55);
+    font-size:8px;
+    white-space:nowrap;
+}
+
+@media(max-width:700px){
+    #status{
+        top:110px;
+        max-width:58vw;
+        overflow:hidden;
+        text-overflow:ellipsis;
+    }
+    #speed{
+        top:73px;
+        right:115px;
+    }
+    #gps{
+        width:82px;
+        height:82px;
+    }
+    #joystick{
+        width:118px;
+        height:118px;
+    }
+    #stick{
+        width:58px;
+        height:58px;
+        left:29px;
+        top:29px;
+    }
+    #actions{
+        gap:7px;
+        right:10px;
+    }
+    .action{
+        width:53px;
+        height:53px;
+    }
+    #gas{
+        width:65px;
+        height:65px;
+    }
+    #mode{
+        bottom:116px;
+    }
+}
+
+@media(orientation:landscape) and (max-height:500px){
+    #joystick{
+        bottom:15px;
+        left:15px;
+    }
+    #actions{
+        bottom:14px;
+    }
+    #jcbControls{
+        bottom:78px;
+    }
+    #mode{
+        bottom:83px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div id="game"></div>
+
+<div id="loading">
+    loading farm world...
+    <small>starting 3d engine</small>
+</div>
+
+<div id="hud">
+
+    <div id="money">
+        💰 ₹<span id="moneyValue">0</span>
+        &nbsp; ⭐ <span id="scoreValue">0</span>
+    </div>
+
+    <div id="mission">
+        🎯 collect sand from the JCB
+    </div>
+
+    <div id="status">
+        walk to the tractor
+    </div>
+
+    <div id="speed">0 km/h</div>
+
+    <div id="gps">
+        <div id="gpsArrow"></div>
+        <div id="gpsText">TARGET</div>
+    </div>
+
+    <div id="mode">MODE: ON FOOT</div>
+
+    <div id="cameraTouch"></div>
+
+    <div id="joystick">
+        <div id="stick"></div>
+    </div>
+
+    <div id="actions">
+
+        <button class="action" id="brake">▼</button>
+
+        <button class="action" id="enter">
+            🚪<br>ENTER
+        </button>
+
+        <button class="action" id="gas">▲</button>
+
+    </div>
+
+    <div id="jcbControls">
+        <button class="jcb" id="boomUp">⬆</button>
+        <button class="jcb" id="boomDown">⬇</button>
+        <button class="jcb" id="dig">⛏</button>
+        <button class="jcb" id="dump">🪣</button>
+    </div>
+
+    <div id="help">
+        left joystick = move / drive • right side swipe = camera • enter = vehicle
+    </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+"use strict";
+
+/* =========================================================
+   renderer
+========================================================= */
+
+if(typeof THREE==="undefined"){
+    document.getElementById("loading").innerHTML =
+        "three.js could not load<br><small>check internet connection and reload</small>";
+    throw new Error("three.js failed to load");
+}
+
+const scene = new THREE.Scene();
+
+scene.background =
+    new THREE.Color(0x86c4e7);
+
+scene.fog =
+    new THREE.Fog(
+        0x86c4e7,
+        150,
+        520
+    );
+
+const camera =
+    new THREE.PerspectiveCamera(
+        60,
+        innerWidth/innerHeight,
+        .1,
+        800
+    );
+
+const renderer =
+    new THREE.WebGLRenderer({
+        antialias:true,
+        alpha:false,
+        powerPreference:"high-performance"
+    });
+
+renderer.setPixelRatio(
+    Math.min(devicePixelRatio,1.7)
+);
+
+renderer.setSize(
+    innerWidth,
+    innerHeight
+);
+
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=
+    THREE.PCFSoftShadowMap;
+
+renderer.outputEncoding=
+    THREE.sRGBEncoding;
+
+renderer.toneMapping=
+    THREE.ACESFilmicToneMapping;
+
+renderer.toneMappingExposure=1.1;
+
+document
+    .getElementById("game")
+    .appendChild(renderer.domElement);
+
+/* =========================================================
+   lighting
+========================================================= */
+
+const ambient =
+    new THREE.HemisphereLight(
+        0xdff6ff,
+        0x315129,
+        1.7
+    );
+
+scene.add(ambient);
+
+const sun =
+    new THREE.DirectionalLight(
+        0xffefc4,
+        2.5
+    );
+
+sun.position.set(
+    100,
+    170,
+    90
+);
+
+sun.castShadow=true;
+
+sun.shadow.mapSize.set(
+    2048,
+    2048
+);
+
+sun.shadow.camera.left=-180;
+sun.shadow.camera.right=180;
+sun.shadow.camera.top=180;
+sun.shadow.camera.bottom=-180;
+sun.shadow.camera.near=1;
+sun.shadow.camera.far=450;
+
+scene.add(sun);
+
+/* =========================================================
+   materials
+========================================================= */
+
+function mat(
+    color,
+    rough=.8,
+    metal=0
+){
+    return new THREE.MeshStandardMaterial({
+        color:color,
+        roughness:rough,
+        metalness:metal
+    });
+}
+
+const grass=mat(0x438235,1);
+const road=mat(0x292e34,.98);
+const roadLine=mat(0xfacc15,.7);
+const red=mat(0xc91414,.55);
+const redDark=mat(0x861010,.7);
+const black=mat(0x080a0b,.95);
+const rubber=mat(0x101214,.98);
+const steel=mat(0x59636e,.4,.65);
+const blue=mat(0x1268a5,.58,.1);
+const blueDark=mat(0x0b4772,.7);
+const yellow=mat(0xf0b800,.52);
+const dirt=mat(0x71492d,1);
+const wood=mat(0x58381f,1);
+const leaves=mat(0x1f6b2b,1);
+const sand=mat(0xa87842,1);
+
+const glass =
+    new THREE.MeshStandardMaterial({
+        color:0x8fd4ef,
+        roughness:.08,
+        metalness:.12,
+        transparent:true,
+        opacity:.52
+    });
+
+function box(
+    w,h,d,
+    material,
+    x=0,y=0,z=0
+){
+    const m=
+        new THREE.Mesh(
+            new THREE.BoxGeometry(
+                w,h,d
+            ),
+            material
+        );
+
+    m.position.set(x,y,z);
+
+    m.castShadow=true;
+    m.receiveShadow=true;
+
+    return m;
+}
+
+function cylinder(
+    r,h,
+    material,
+    x=0,y=0,z=0,
+    segments=16
+){
+    const m=
+        new THREE.Mesh(
+            new THREE.CylinderGeometry(
+                r,r,h,segments
+            ),
+            material
+        );
+
+    m.position.set(x,y,z);
+
+    m.castShadow=true;
+    m.receiveShadow=true;
+
+    return m;
+}
+
+/* =========================================================
+   grass
+========================================================= */
+
+const grassCanvas =
+    document.createElement("canvas");
+
+grassCanvas.width=128;
+grassCanvas.height=128;
+
+const gc=
+    grassCanvas.getContext("2d");
+
+gc.fillStyle="#438235";
+gc.fillRect(0,0,128,128);
+
+for(let i=0;i<1100;i++){
+
+    const colors=[
+        "#4b8b39",
+        "#3b7731",
+        "#558e40",
+        "#32682b",
+        "#60984b"
+    ];
+
+    gc.fillStyle=
+        colors[
+            Math.floor(
+                Math.random()*colors.length
+            )
+        ];
+
+    gc.fillRect(
+        Math.random()*128,
+        Math.random()*128,
+        1+Math.random()*2,
+        1+Math.random()*2
+    );
+}
+
+const grassTexture=
+    new THREE.CanvasTexture(
+        grassCanvas
+    );
+
+grassTexture.wrapS=
+    THREE.RepeatWrapping;
+
+grassTexture.wrapT=
+    THREE.RepeatWrapping;
+
+grassTexture.repeat.set(60,60);
+
+const ground=
+    new THREE.Mesh(
+        new THREE.PlaneGeometry(
+            600,
+            600
+        ),
+        new THREE.MeshStandardMaterial({
+            map:grassTexture,
+            roughness:1
+        })
+    );
+
+ground.rotation.x=-Math.PI/2;
+ground.receiveShadow=true;
+
+scene.add(ground);
+
+/* =========================================================
+   roads
+========================================================= */
+
+function roadLineSet(
+    x,z,length,horizontal
+){
+
+    const dash=5;
+    const gap=5;
+
+    for(
+        let p=-length/2+5;
+        p<length/2;
+        p+=dash+gap
+    ){
+
+        const l=
+            box(
+                horizontal?dash:.3,
+                .055,
+                horizontal?.3:dash,
+                roadLine,
+                horizontal?x+p:x,
+                .06,
+                horizontal?z:z+p
+            );
+
+        scene.add(l);
+    }
+}
+
+function makeRoad(
+    x,z,width,length,horizontal
+){
+
+    const r=
+        box(
+            horizontal?length:width,
+            .08,
+            horizontal?width:length,
+            road,
+            x,
+            .035,
+            z
+        );
+
+    scene.add(r);
+
+    roadLineSet(
+        x,z,length,horizontal
+    );
+}
+
+makeRoad(
+    0,0,
+    18,480,
+    false
+);
+
+makeRoad(
+    0,0,
+    18,480,
+    true
+);
+
+makeRoad(
+    105,0,
+    14,480,
+    false
+);
+
+makeRoad(
+    0,105,
+    14,480,
+    true
+);
+
+makeRoad(
+    -105,0,
+    14,350,
+    false
+);
+
+/* =========================================================
+   trees
+========================================================= */
+
+function makeTree(
+    x,z,s=1
+){
+
+    const g=
+        new THREE.Group();
+
+    g.position.set(
+        x,0,z
+    );
+
+    g.scale.setScalar(s);
+
+    const trunk=
+        cylinder(
+            .48,
+            4,
+            wood,
+            0,2,0,
+            10
+        );
+
+    g.add(trunk);
+
+    const c1=
+        new THREE.Mesh(
+            new THREE.SphereGeometry(
+                2.5,14,11
+            ),
+            leaves
+        );
+
+    c1.position.y=5.2;
+    c1.castShadow=true;
+
+    g.add(c1);
+
+    const c2=
+        new THREE.Mesh(
+            new THREE.SphereGeometry(
+                1.7,12,10
+            ),
+            leaves
+        );
+
+    c2.position.set(
+        1.1,
+        6,
+        .3
+    );
+
+    c2.castShadow=true;
+
+    g.add(c2);
+
+    scene.add(g);
+}
+
+/* =========================================================
+   buildings
+========================================================= */
+
+function makeBuilding(
+    x,z,w,h,d,color
+){
+
+    const g=
+        new THREE.Group();
+
+    g.position.set(x,0,z);
+
+    const body=
+        box(
+            w,h,d,
+            mat(color,.76),
+            0,h/2,0
+        );
+
+    g.add(body);
+
+    const floors=
+        Math.floor(h/3.3);
+
+    const winMat=
+        new THREE.MeshStandardMaterial({
+            color:0xa4dcf0,
+            roughness:.08,
+            metalness:.1
+        });
+
+    for(
+        let f=0;
+        f<floors;
+        f++
+    ){
+
+        const y=
+            1.8+f*3.2;
+
+        if(y>h-1)
+            continue;
+
+        for(
+            let c=0;
+            c<Math.floor(w/3);
+            c++
+        ){
+
+            const xx=
+                -w/2+1.3+c*3;
+
+            const a=
+                box(
+                    1.15,
+                    1.2,
+                    .08,
+                    winMat,
+                    xx,y,d/2+.05
+                );
+
+            const b=
+                box(
+                    1.15,
+                    1.2,
+                    .08,
+                    winMat,
+                    xx,y,-d/2-.05
+                );
+
+            g.add(a,b);
+        }
+    }
+
+    scene.add(g);
+}
+
+const buildingColors=[
+    0x64748b,
+    0x475569,
+    0x7b8794,
+    0x94a3b8,
+    0x596575
+];
+
+for(let i=0;i<35;i++){
+
+    const side=
+        i%2===0?1:-1;
+
+    const z=
+        -215+
+        (i*29)%420;
+
+    const x=
+        side*(19+(i%4)*8);
+
+    makeBuilding(
+        x,
+        z,
+        8+(i%3)*3,
+        18+(i%5)*8,
+        8+(i%2)*3,
+        buildingColors[
+            i%buildingColors.length
+        ]
+    );
+}
+
+/* trees */
+
+for(let i=0;i<100;i++){
+
+    const x=
+        -245+Math.random()*490;
+
+    const z=
+        -245+Math.random()*490;
+
+    if(
+        Math.abs(x)<13 ||
+        Math.abs(z)<13
+    )
+        continue;
+
+    makeTree(
+        x,z,
+        .65+Math.random()*.8
+    );
+}
+
+/* =========================================================
+   sand pit
+========================================================= */
+
+const pit=
+    new THREE.Mesh(
+        new THREE.CircleGeometry(
+            19,40
+        ),
+        sand
+    );
+
+pit.rotation.x=-Math.PI/2;
+pit.position.set(
+    -62,.07,-65
+);
+
+pit.receiveShadow=true;
+
+scene.add(pit);
+
+const pitOuter=
+    new THREE.Mesh(
+        new THREE.RingGeometry(
+            19,21,40
+        ),
+        mat(0x72502e,1)
+    );
+
+pitOuter.rotation.x=-Math.PI/2;
+pitOuter.position.set(
+    -62,.08,-65
+);
+
+scene.add(pitOuter);
+
+/* =========================================================
+   target
+========================================================= */
+
+const target=
+    new THREE.Group();
+
+target.position.set(
+    125,.1,125
+);
+
+const targetPad=
+    new THREE.Mesh(
+        new THREE.CylinderGeometry(
+            12,12,.15,32
+        ),
+        mat(0x155e37,.8)
+    );
+
+targetPad.receiveShadow=true;
+
+target.add(targetPad);
+
+const ring=
+    new THREE.Mesh(
+        new THREE.RingGeometry(
+            8,9,32
+        ),
+        mat(0xfacc15,.55)
+    );
+
+ring.rotation.x=-Math.PI/2;
+ring.position.y=.1;
+
+target.add(ring);
+
+scene.add(target);
+
+/* =========================================================
+   tractor
+========================================================= */
+
+const tractor=
+    new THREE.Group();
+
+tractor.position.set(
+    25,0,28
+);
+
+tractor.rotation.y=Math.PI;
+
+scene.add(tractor);
+
+const tractorBody=
+    box(
+        4.5,2,6,
+        red,
+        0,2.05,0
+    );
+
+tractor.add(tractorBody);
+
+const frontHood=
+    box(
+        3.5,1.6,2.6,
+        red,
+        0,3.5,1.8
+    );
+
+tractor.add(frontHood);
+
+const grille=
+    box(
+        3.05,1.15,.18,
+        black,
+        0,3.25,3.13
+    );
+
+tractor.add(grille);
+
+function tractorWheel(
+    x,z,r,w
+){
+
+    const wheel=
+        new THREE.Mesh(
+            new THREE.CylinderGeometry(
+                r,r,w,24
+            ),
+            rubber
+        );
+
+    wheel.rotation.z=
+        Math.PI/2;
+
+    wheel.position.set(
+        x,r,z
+    );
+
+    wheel.castShadow=true;
+    wheel.receiveShadow=true;
+
+    tractor.add(wheel);
+
+    const hub=
+        new THREE.Mesh(
+            new THREE.CylinderGeometry(
+                r*.27,
+                r*.27,
+                w+.06,
+                16
+            ),
+            steel
+        );
+
+    hub.rotation.z=
+        Math.PI/2;
+
+    hub.position.copy(
+        wheel.position
+    );
+
+    tractor.add(hub);
+
+    return wheel;
+}
+
+const rearLeft=
+    tractorWheel(
+        -2.45,-1.45,
+        2,.9
+    );
+
+const rearRight=
+    tractorWheel(
+        2.45,-1.45,
+        2,.9
+    );
+
+const frontLeft=
+    tractorWheel(
+        -1.5,2.25,
+        1.08,.62
+    );
+
+const frontRight=
+    tractorWheel(
+        1.5,2.25,
+        1.08,.62
+    );
+
+/* seat */
+
+tractor.add(
+    box(
+        2.1,.35,1.8,
+        black,
+        0,4.1,-.4
+    )
+);
+
+tractor.add(
+    box(
+        2.1,1.9,.28,
+        black,
+        0,4.85,-1.15
+    )
+);
+
+/* steering wheel */
+
+const steering=
+    new THREE.Mesh(
+        new THREE.TorusGeometry(
+            .55,.08,8,24
+        ),
+        black
+    );
+
+steering.position.set(
+    0,4.95,.95
+);
+
+steering.rotation.x=
+    Math.PI/2;
+
+tractor.add(steering);
+
+/* steering column */
+
+const column=
+    cylinder(
+        .09,
+        1.2,
+        steel,
+        0,4.45,.72,
+        10
+    );
+
+column.rotation.x=-.35;
+
+tractor.add(column);
+
+/* exhaust */
+
+const exhaust=
+    cylinder(
+        .18,
+        2.8,
+        steel,
+        1.35,5,1.95,
+        12
+    );
+
+tractor.add(exhaust);
+
+tractor.add(
+    cylinder(
+        .25,.15,
+        black,
+        1.35,6.4,1.95,
+        12
+    )
+);
+
+/* hitch */
+
+tractor.add(
+    box(
+        .45,.35,2.2,
+        steel,
+        0,1.35,-3.8
+    )
+);
+
+/* =========================================================
+   trolley
+========================================================= */
+
+const trolley=
+    new THREE.Group();
+
+scene.add(trolley);
+
+trolley.rotation.y=
+    tractor.rotation.y;
+
+const trolleyBody=
+    box(
+        6,2.2,7.5,
+        blue,
+        0,2.2,0
+    );
+
+trolley.add(trolleyBody);
+
+trolley.add(
+    box(
+        .3,2,7.7,
+        blueDark,
+        -3.05,3.25,0
+    )
+);
+
+trolley.add(
+    box(
+        .3,2,7.7,
+        blueDark,
+        3.05,3.25,0
+    )
+);
+
+trolley.add(
+    box(
+        6.1,2,.3,
+        blueDark,
+        0,3.25,-3.75
+    )
+);
+
+trolley.add(
+    box(
+        .45,.35,2.8,
+        steel,
+        0,1.35,-4.9
+    )
+);
+
+function trailerWheel(
+    x,z
+){
+
+    const w=
+        new THREE.Mesh(
+            new THREE.CylinderGeometry(
+                1.1,1.1,.65,20
+            ),
+            rubber
+        );
+
+    w.rotation.z=
+        Math.PI/2;
+
+    w.position.set(
+        x,1.1,z
+    );
+
+    w.castShadow=true;
+
+    trolley.add(w);
+}
+
+trailerWheel(-3.15,-1.9);
+trailerWheel(3.15,-1.9);
+trailerWheel(-3.15,1.9);
+trailerWheel(3.15,1.9);
+
+/* dirt load */
+
+const dirtLoad=
+    new THREE.Group();
+
+trolley.add(dirtLoad);
+
+for(let i=0;i<22;i++){
+
+    const p=
+        new THREE.Mesh(
+            new THREE.DodecahedronGeometry(
+                .45+Math.random()*.55,
+                0
+            ),
+            dirt
+        );
+
+    p.position.set(
+        -2.4+Math.random()*4.8,
+        3.25+Math.random()*1.5,
+        -2.8+Math.random()*5.5
+    );
+
+    p.scale.y=
+        .65+Math.random()*.7;
+
+    p.castShadow=true;
+
+    dirtLoad.add(p);
+}
+
+dirtLoad.visible=false;
+
+/* =========================================================
+   jcb
+========================================================= */
+
+const jcb=
+    new THREE.Group();
+
+jcb.position.set(
+    -62,0,-53
+);
+
+jcb.rotation.y=-.4;
+
+scene.add(jcb);
+
+/* tracks */
+
+function jcbTrack(x){
+
+    const t=
+        box(
+            2.2,1.7,7,
+            rubber,
+            x,.95,0
+        );
+
+    jcb.add(t);
+
+    for(let i=0;i<5;i++){
+
+        const w=
+            new THREE.Mesh(
+                new THREE.CylinderGeometry(
+                    .52,.52,2.25,16
+                ),
+                steel
+            );
+
+        w.rotation.z=
+            Math.PI/2;
+
+        w.position.set(
+            x,.9,
+            -2.5+i*1.25
+        );
+
+        w.castShadow=true;
+
+        jcb.add(w);
+    }
+}
+
+jcbTrack(-2.2);
+jcbTrack(2.2);
+
+/* base */
+
+jcb.add(
+    box(
+        6,1.3,4.5,
+        yellow,
+        0,2.05,0
+    )
+);
+
+/* counterweight */
+
+jcb.add(
+    box(
+        4.8,2.2,2.3,
+        yellow,
+        0,3.2,-1.2
+    )
+);
+
+/* cabin */
+
+const cabin=
+    new THREE.Group();
+
+cabin.position.set(
+    .55,3.15,-.25
+);
+
+jcb.add(cabin);
+
+cabin.add(
+    box(
+        3.8,3.4,3.4,
+        yellow,
+        0,0,0
+    )
+);
+
+cabin.add(
+    box(
+        3.05,2.05,.08,
+        glass,
+        0,.35,1.73
+    )
+);
+
+cabin.add(
+    box(
+        .08,2.05,2.6,
+        glass,
+        -1.93,.35,0
+    )
+);
+
+cabin.add(
+    box(
+        .08,2.05,2.6,
+        glass,
+        1.93,.35,0
+    )
+);
+
+/* boom */
+
+const boomPivot=
+    new THREE.Group();
+
+boomPivot.position.set(
+    -2.4,4,.8
+);
+
+jcb.add(boomPivot);
+
+const boom=
+    box(
+        1.25,1.25,6.5,
+        yellow,
+        0,0,2.8
+    );
+
+boom.rotation.x=-.55;
+
+boomPivot.add(boom);
+
+const dipper=
+    new THREE.Group();
+
+dipper.position.set(
+    0,-1.05,5.9
+);
+
+boom.add(dipper);
+
+const stick=
+    box(
+        .9,.9,5.4,
+        yellow,
+        0,0,2.5
+    );
+
+stick.rotation.x=.45;
+
+dipper.add(stick);
+
+const bucket=
+    new THREE.Group();
+
+bucket.position.set(
+    0,-1.25,5.15
+);
+
+dipper.add(bucket);
+
+bucket.add(
+    box(
+        3,1.7,2,
+        steel,
+        0,0,0
+    )
+);
+
+for(let i=0;i<5;i++){
+
+    const tooth=
+        box(
+            .32,.45,1,
+            steel,
+            -1.2+i*.6,
+            -.95,1
+        );
+
+    tooth.rotation.x=.25;
+
+    bucket.add(tooth);
+}
+
+/* =========================================================
+   human
+========================================================= */
+
+const player=
+    new THREE.Group();
+
+player.position.set(
+    25,0,18
+);
+
+scene.add(player);
+
+function createHuman(){
+
+    const g=
+        new THREE.Group();
+
+    const skin=
+        mat(0xd89a68,.8);
+
+    const shirt=
+        mat(0x2563eb,.75);
+
+    const pants=
+        mat(0x172554,.8);
+
+    g.add(
+        new THREE.Mesh(
+            new THREE.SphereGeometry(
+                .48,16,12
+            ),
+            skin
+        )
+    );
+
+    g.children[0].position.y=2.8;
+
+    g.add(
+        box(
+            .8,1.25,.5,
+            shirt,
+            0,1.75,0
+        )
+    );
+
+    g.add(
+        box(
+            .25,1.05,.3,
+            pants,
+            -.22,.6,0
+        )
+    );
+
+    g.add(
+        box(
+            .25,1.05,.3,
+            pants,
+            .22,.6,0
+        )
+    );
+
+    g.add(
+        box(
+            .22,1.05,.22,
+            shirt,
+            -.58,1.75,0
+        )
+    );
+
+    g.add(
+        box(
+            .22,1.05,.22,
+            shirt,
+            .58,1.75,0
+        )
+    );
+
+    g.children.forEach(
+        x=>{
+            x.castShadow=true;
+        }
+    );
+
+    return g;
+}
+
+const human=
+    createHuman();
+
+player.add(human);
+
+/* =========================================================
+   game state
+========================================================= */
+
+let mode="foot";
+
+let money=0;
+let score=0;
+
+let tractorSpeed=0;
+
+let trailerYaw=
+    tractor.rotation.y;
+
+let loadAmount=0;
+
+let cameraYaw=0;
+let cameraPitch=.38;
+
+let cameraDistance=13;
+
+const targetPosition=
+    new THREE.Vector3(
+        125,0,125
+    );
+
+const input={
+    x:0,
+    y:0,
+    gas:false,
+    brake:false,
+    enter:false,
+    up:false,
+    down:false,
+    dig:false,
+    dump:false
+};
+
+/* =========================================================
+   joystick
+========================================================= */
+
+const joystick=
+    document.getElementById(
+        "joystick"
+    );
+
+const stick=
+    document.getElementById(
+        "stick"
+    );
+
+let joystickPointer=null;
+
+function setJoystick(
+    clientX,
+    clientY
+){
+
+    const r=
+        joystick.getBoundingClientRect();
+
+    const cx=
+        r.left+r.width/2;
+
+    const cy=
+        r.top+r.height/2;
+
+    let dx=
+        clientX-cx;
+
+    let dy=
+        clientY-cy;
+
+    const max=
+        r.width*.34;
+
+    const len=
+        Math.sqrt(dx*dx+dy*dy);
+
+    if(len>max){
+
+        dx=
+            dx/len*max;
+
+        dy=
+            dy/len*max;
+    }
+
+    input.x=
+        dx/max;
+
+    input.y=
+        dy/max;
+
+    stick.style.transform=
+        "translate("+
+        dx+"px,"+
+        dy+"px)";
+}
+
+function resetJoystick(){
+
+    joystickPointer=null;
+
+    input.x=0;
+    input.y=0;
+
+    stick.style.transform=
+        "translate(0,0)";
+}
+
+joystick.addEventListener(
+    "pointerdown",
+    e=>{
+        e.preventDefault();
+
+        joystickPointer=
+            e.pointerId;
+
+        joystick.setPointerCapture(
+            e.pointerId
+        );
+
+        setJoystick(
+            e.clientX,
+            e.clientY
+        );
+    }
+);
+
+joystick.addEventListener(
+    "pointermove",
+    e=>{
+        if(
+            joystickPointer===
+            e.pointerId
+        ){
+            setJoystick(
+                e.clientX,
+                e.clientY
+            );
+        }
+    }
+);
+
+joystick.addEventListener(
+    "pointerup",
+    e=>{
+        if(
+            joystickPointer===
+            e.pointerId
+        )
+            resetJoystick();
+    }
+);
+
+joystick.addEventListener(
+    "pointercancel",
+    resetJoystick
+);
+
+/* =========================================================
+   swipe camera
+========================================================= */
+
+const cameraTouch=
+    document.getElementById(
+        "cameraTouch"
+    );
+
+let cameraPointer=null;
+let lastCamX=0;
+let lastCamY=0;
+
+cameraTouch.addEventListener(
+    "pointerdown",
+    e=>{
+
+        cameraPointer=
+            e.pointerId;
+
+        lastCamX=
+            e.clientX;
+
+        lastCamY=
+            e.clientY;
+
+        cameraTouch.setPointerCapture(
+            e.pointerId
+        );
+    }
+);
+
+cameraTouch.addEventListener(
+    "pointermove",
+    e=>{
+
+        if(
+            cameraPointer===
+            e.pointerId
+        ){
+
+            const dx=
+                e.clientX-lastCamX;
+
+            const dy=
+                e.clientY-lastCamY;
+
+            lastCamX=e.clientX;
+            lastCamY=e.clientY;
+
+            cameraYaw -=
+                dx*.006;
+
+            cameraPitch +=
+                dy*.004;
+
+            cameraPitch=
+                THREE.MathUtils.clamp(
+                    cameraPitch,
+                    .12,
+                    .9
+                );
+        }
+    }
+);
+
+cameraTouch.addEventListener(
+    "pointerup",
+    e=>{
+        if(
+            cameraPointer===
+            e.pointerId
+        )
+            cameraPointer=null;
+    }
+);
+
+cameraTouch.addEventListener(
+    "pointercancel",
+    e=>{
+        cameraPointer=null;
+    }
+);
+
+/* =========================================================
+   action buttons
+========================================================= */
+
+function buttonHold(
+    id,
+    key
+){
+
+    const b=
+        document.getElementById(id);
+
+    b.addEventListener(
+        "pointerdown",
+        e=>{
+            e.preventDefault();
+
+            input[key]=true;
+
+            b.classList.add(
+                "active"
+            );
+
+            const r=
+                document.createElement(
+                    "span"
+                );
+
+            r.className="ripple";
+
+            r.style.left=
+                e.offsetX+"px";
+
+            r.style.top=
+                e.offsetY+"px";
+
+            b.appendChild(r);
+
+            setTimeout(
+                ()=>{
+                    if(r.parentNode)
+                        r.remove();
+                },
+                600
+            );
+        }
+    );
+
+    const release=
+        ()=>{
+            input[key]=false;
+            b.classList.remove(
+                "active"
+            );
+        };
+
+    b.addEventListener(
+        "pointerup",
+        release
+    );
+
+    b.addEventListener(
+        "pointercancel",
+        release
+    );
+
+    b.addEventListener(
+        "pointerleave",
+        release
+    );
+}
+
+buttonHold("gas","gas");
+buttonHold("brake","brake");
+buttonHold("boomUp","up");
+buttonHold("boomDown","down");
+buttonHold("dig","dig");
+buttonHold("dump","dump");
+
+document
+    .getElementById("enter")
+    .addEventListener(
+        "pointerdown",
+        e=>{
+            e.preventDefault();
+            enterVehicle();
+        }
+    );
+
+/* =========================================================
+   keyboard
+========================================================= */
+
+window.addEventListener(
+    "keydown",
+    e=>{
+
+        if(e.key==="w"||e.key==="W"||e.key==="ArrowUp")
+            input.gas=true;
+
+        if(e.key==="s"||e.key==="S"||e.key==="ArrowDown")
+            input.brake=true;
+
+        if(e.key==="a"||e.key==="A"||e.key==="ArrowLeft")
+            input.x=-1;
+
+        if(e.key==="d"||e.key==="D"||e.key==="ArrowRight")
+            input.x=1;
+
+        if(e.key==="e"||e.key==="E")
+            enterVehicle();
+
+        if(e.key==="r"||e.key==="R")
+            input.up=true;
+
+        if(e.key==="f"||e.key==="F")
+            input.down=true;
+
+        if(e.key==="g"||e.key==="G")
+            input.dig=true;
+
+        if(e.key==="h"||e.key==="H")
+            input.dump=true;
+    }
+);
+
+window.addEventListener(
+    "keyup",
+    e=>{
+
+        if(e.key==="w"||e.key==="W"||e.key==="ArrowUp")
+            input.gas=false;
+
+        if(e.key==="s"||e.key==="S"||e.key==="ArrowDown")
+            input.brake=false;
+
+        if(
+            e.key==="a"||
+            e.key==="A"||
+            e.key==="ArrowLeft"||
+            e.key==="d"||
+            e.key==="D"||
+            e.key==="ArrowRight"
+        )
+            input.x=0;
+
+        if(e.key==="r"||e.key==="R")
+            input.up=false;
+
+        if(e.key==="f"||e.key==="F")
+            input.down=false;
+
+        if(e.key==="g"||e.key==="G")
+            input.dig=false;
+
+        if(e.key==="h"||e.key==="H")
+            input.dump=false;
+    }
+);
+
+/* =========================================================
+   helpers
+========================================================= */
+
+function distance(
+    a,b
+){
+
+    const dx=a.x-b.x;
+    const dz=a.z-b.z;
+
+    return Math.sqrt(
+        dx*dx+dz*dz
+    );
+}
+
+function forward(
+    yaw
+){
+
+    return new THREE.Vector3(
+        Math.sin(yaw),
+        0,
+        Math.cos(yaw)
+    );
+}
+
+function setStatus(
+    text
+){
+
+    document
+        .getElementById(
+            "status"
+        )
+        .textContent=text;
+}
+
+/* =========================================================
+   enter / exit
+========================================================= */
+
+function enterVehicle(){
+
+    if(mode==="foot"){
+
+        const dt=
+            distance(
+                player.position,
+                tractor.position
+            );
+
+        const dj=
+            distance(
+                player.position,
+                jcb.position
+            );
+
+        if(dt<9){
+
+            mode="tractor";
+
+            human.visible=false;
+
+            cameraYaw=
+                tractor.rotation.y;
+
+            setStatus(
+                "🚜 tractor mode"
+            );
+
+        }else if(dj<10){
+
+            mode="jcb";
+
+            human.visible=false;
+
+            cameraYaw=
+                jcb.rotation.y;
+
+            setStatus(
+                "🏗️ JCB mode"
+            );
+
+        }else{
+
+            setStatus(
+                "vehicle के पास जाएँ"
+            );
+        }
+
+    }else{
+
+        if(mode==="tractor"){
+
+            const f=
+                forward(
+                    tractor.rotation.y
+                );
+
+            player.position.copy(
+                tractor.position
+            );
+
+            player.position.x -=
+                f.x*5;
+
+            player.position.z -=
+                f.z*5;
+
+        }else{
+
+            player.position.copy(
+                jcb.position
+            );
+
+            player.position.x+=7;
+        }
+
+        human.visible=true;
+
+        mode="foot";
+
+        tractorSpeed=0;
+
+        setStatus(
+            "on foot"
+        );
+    }
+}
+
+/* =========================================================
+   foot movement
+========================================================= */
+
+function updateFoot(dt){
+
+    if(mode!=="foot")
+        return;
+
+    const magnitude=
+        Math.min(
+            1,
+            Math.sqrt(
+                input.x*input.x+
+                input.y*input.y
+            )
+        );
+
+    if(magnitude<.03)
+        return;
+
+    const speed=7;
+
+    /* joystick y: up is negative */
+    const moveAngle=
+        cameraYaw+
+        Math.atan2(
+            input.x,
+            -input.y
+        );
+
+    player.rotation.y=
+        moveAngle;
+
+    const f=
+        forward(
+            moveAngle
+        );
+
+    player.position.x +=
+        f.x*
+        speed*
+        magnitude*
+        dt;
+
+    player.position.z +=
+        f.z*
+        speed*
+        magnitude*
+        dt;
+
+    player.position.x=
+        THREE.MathUtils.clamp(
+            player.position.x,
+            -270,270
+        );
+
+    player.position.z=
+        THREE.MathUtils.clamp(
+            player.position.z,
+            -270,270
+        );
+
+    human.position.y=
+        Math.abs(
+            Math.sin(
+                performance.now()*.014
+            )
+        )*.05;
+}
+
+/* =========================================================
+   tractor physics
+========================================================= */
+
+function updateTractor(dt){
+
+    if(mode!=="tractor")
+        return;
+
+    const throttle=
+        input.gas?1:0;
+
+    const brake=
+        input.brake?1:0;
+
+    if(throttle){
+
+        tractorSpeed +=
+            18*dt;
+
+        tractorSpeed=
+            Math.min(
+                tractorSpeed,
+                23
+            );
+
+    }else if(brake){
+
+        tractorSpeed -=
+            15*dt;
+
+        tractorSpeed=
+            Math.max(
+                tractorSpeed,
+                -9
+            );
+
+    }else{
+
+        tractorSpeed *=
+            Math.pow(.05,dt);
+
+        if(
+            Math.abs(
+                tractorSpeed
+            )<.03
+        )
+            tractorSpeed=0;
+    }
+
+    const steer=
+        THREE.MathUtils.clamp(
+            input.x,
+            -1,
+            1
+        );
+
+    if(
+        Math.abs(tractorSpeed)>.15
+    ){
+
+        const speedFactor=
+            Math.min(
+                1,
+                Math.abs(
+                    tractorSpeed
+                )/8
+            );
+
+        tractor.rotation.y +=
+            steer*
+            .9*
+            speedFactor*
+            dt*
+            (
+                tractorSpeed>=0
+                ?1
+                :-1
+            );
+
+        frontLeft.rotation.y=
+            -steer*.45;
+
+        frontRight.rotation.y=
+            -steer*.45;
+    }
+
+    const f=
+        forward(
+            tractor.rotation.y
+        );
+
+    tractor.position.x +=
+        f.x*
+        tractorSpeed*
+        dt;
+
+    tractor.position.z +=
+        f.z*
+        tractorSpeed*
+        dt;
+
+    tractor.position.x=
+        THREE.MathUtils.clamp(
+            tractor.position.x,
+            -270,270
+        );
+
+    tractor.position.z=
+        THREE.MathUtils.clamp(
+            tractor.position.z,
+            -270,270
+        );
+
+    /* =====================================================
+       REAL ARTICULATED HITCH PHYSICS
+
+       trailer yaw does not simply equal tractor yaw.
+       It follows the tractor through an angular coupling.
+    ===================================================== */
+
+    const hitch=
+        new THREE.Vector3();
+
+    tractor.localToWorld(
+        hitch.set(
+            0,
+            1.35,
+            -4.8
+        )
+    );
+
+    const trailerLength=5.4;
+
+    let angleDifference=
+        tractor.rotation.y-
+        trailerYaw;
+
+    while(angleDifference>Math.PI)
+        angleDifference-=Math.PI*2;
+
+    while(angleDifference<-Math.PI)
+        angleDifference+=Math.PI*2;
+
+    const lateralForce=
+        Math.sin(
+            angleDifference
+        );
+
+    const angularSpeed=
+        (
+            tractorSpeed/
+            trailerLength
+        )*
+        lateralForce;
+
+    trailerYaw +=
+        angularSpeed*
+        dt;
+
+    const trailerF=
+        forward(
+            trailerYaw
+        );
+
+    trolley.position.set(
+        hitch.x-
+        trailerF.x*4.9,
+        0,
+        hitch.z-
+        trailerF.z*4.9
+    );
+
+    trolley.rotation.y=
+        trailerYaw;
+
+    /* smoke */
+
+    if(
+        Math.abs(tractorSpeed)>1 &&
+        Math.random()<dt*8
+    ){
+        createSmoke();
+    }
+}
+
+/* =========================================================
+   JCB controls
+========================================================= */
+
+let boomAngle=-.55;
+let bucketAngle=.25;
+let digTime=0;
+
+function updateJcb(dt){
+
+    if(mode!=="jcb")
+        return;
+
+    if(input.up){
+
+        boomAngle+=
+            .65*dt;
+
+        boomAngle=
+            Math.min(
+                .25,
+                boomAngle
+            );
+    }
+
+    if(input.down){
+
+        boomAngle-=
+            .65*dt;
+
+        boomAngle=
+            Math.max(
+                -1.1,
+                boomAngle
+            );
+    }
+
+    boomPivot.rotation.x=
+        boomAngle;
+
+    if(input.dig){
+
+        bucketAngle+=
+            1.2*dt;
+
+        bucketAngle=
+            Math.min(
+                1.1,
+                bucketAngle
+            );
+
+        digTime+=dt;
+
+        if(
+            Math.random()<dt*28
+        ){
+            createDust();
+        }
+
+        if(
+            digTime>.9
+        ){
+
+            digTime=0;
+
+            if(loadAmount<1){
+
+                loadAmount=
+                    Math.min(
+                        1,
+                        loadAmount+.25
+                    );
+
+                money+=500;
+                score+=500;
+
+                dirtLoad.visible=true;
+
+                setStatus(
+                    "⛏️ sand loaded +₹500"
+                );
+
+            }else{
+
+                setStatus(
+                    "trolley is full"
+                );
+            }
+        }
+
+    }else{
+
+        digTime=0;
+    }
+
+    if(input.dump){
+
+        bucketAngle-=
+            1.3*dt;
+
+        bucketAngle=
+            Math.max(
+                -.9,
+                bucketAngle
+            );
+    }
+
+    bucket.rotation.x=
+        bucketAngle;
+}
+
+/* =========================================================
+   dust and smoke
+========================================================= */
+
+const smoke=[];
+const dust=[];
+
+function createSmoke(){
+
+    const p=
+        new THREE.Mesh(
+            new THREE.SphereGeometry(
+                .18+
+                Math.random()*.2,
+                8,8
+            ),
+            new THREE.MeshBasicMaterial({
+                color:0x9ca3af,
+                transparent:true,
+                opacity:.4
+            })
+        );
+
+    const pos=
+        new THREE.Vector3();
+
+    exhaust.getWorldPosition(pos);
+
+    p.position.copy(pos);
+
+    scene.add(p);
+
+    smoke.push({
+        mesh:p,
+        life:1
+    });
+}
+
+function createDust(){
+
+    const p=
+        new THREE.Mesh(
+            new THREE.DodecahedronGeometry(
+                .1+
+                Math.random()*.22,
+                0
+            ),
+            mat(0x85572f,1)
+        );
+
+    const pos=
+        new THREE.Vector3();
+
+    bucket.getWorldPosition(pos);
+
+    p.position.copy(pos);
+
+    p.position.x+=
+        (Math.random()-.5)*1.8;
+
+    p.position.z+=
+        (Math.random()-.5)*1.8;
+
+    scene.add(p);
+
+    dust.push({
+        mesh:p,
+        life:1,
+        vx:(Math.random()-.5)*2.5,
+        vy:2+Math.random()*3,
+        vz:(Math.random()-.5)*2.5
+    });
+}
+
+function updateParticles(dt){
+
+    for(
+        let i=smoke.length-1;
+        i>=0;
+        i--
+    ){
+
+        const p=smoke[i];
+
+        p.life-=dt*.65;
+
+        p.mesh.position.y+=
+            dt*2.1;
+
+        p.mesh.position.x+=
+            (Math.random()-.5)*dt;
+
+        p.mesh.position.z+=
+            (Math.random()-.5)*dt;
+
+        p.mesh.scale.multiplyScalar(
+            1+dt*.65
+        );
+
+        p.mesh.material.opacity=
+            Math.max(
+                0,
+                p.life*.42
+            );
+
+        if(p.life<=0){
+
+            scene.remove(
+                p.mesh
+            );
+
+            smoke.splice(i,1);
+        }
+    }
+
+    for(
+        let i=dust.length-1;
+        i>=0;
+        i--
+    ){
+
+        const p=dust[i];
+
+        p.life-=dt*1.15;
+
+        p.mesh.position.x+=
+            p.vx*dt;
+
+        p.mesh.position.y+=
+            p.vy*dt;
+
+        p.mesh.position.z+=
+            p.vz*dt;
+
+        p.vy-=
+            4.5*dt;
+
+        p.mesh.material.opacity=
+            Math.max(
+                0,
+                p.life
+            );
+
+        if(p.life<=0){
+
+            scene.remove(
+                p.mesh
+            );
+
+            dust.splice(i,1);
+        }
+    }
+}
+
+/* =========================================================
+   loading visual
+========================================================= */
+
+function updateLoad(){
+
+    dirtLoad.visible=
+        loadAmount>0;
+
+    const count=
+        Math.ceil(
+            dirtLoad.children.length*
+            loadAmount
+        );
+
+    dirtLoad.children.forEach(
+        (child,i)=>{
+            child.visible=
+                i<count;
+        }
+    );
+}
+
+/* =========================================================
+   delivery
+========================================================= */
+
+function updateMission(){
+
+    if(
+        mode==="tractor" &&
+        loadAmount>0 &&
+        distance(
+            trolley.position,
+            targetPosition
+        )<14 &&
+        input.dump
+    ){
+
+        loadAmount=0;
+
+        money+=1000;
+        score+=1000;
+
+        dirtLoad.visible=false;
+
+        setStatus(
+            "🏁 delivery complete +₹1000"
+        );
+
+        input.dump=false;
+    }
+
+    const mission=
+        document.getElementById(
+            "mission"
+        );
+
+    if(loadAmount>=1){
+
+        mission.textContent=
+            "🎯 trolley full • go to yellow target";
+
+    }else{
+
+        mission.textContent=
+            "🎯 collect sand from the JCB";
+    }
+}
+
+/* =========================================================
+   camera
+========================================================= */
+
+const camPos=
+    new THREE.Vector3();
+
+const camLook=
+    new THREE.Vector3();
+
+function updateCamera(dt){
+
+    let object;
+
+    if(mode==="foot")
+        object=player;
+
+    if(mode==="tractor")
+        object=tractor;
+
+    if(mode==="jcb")
+        object=jcb;
+
+    /* camera controlled by swipe */
+
+    const horizontal=
+        cameraYaw;
+
+    const cp=
+        Math.cos(cameraPitch);
+
+    const sp=
+        Math.sin(cameraPitch);
+
+    camPos.set(
+        object.position.x+
+        Math.sin(horizontal)*
+        cameraDistance*
+        cp,
+
+        object.position.y+
+        3+
+        sp*
+        cameraDistance,
+
+        object.position.z+
+        Math.cos(horizontal)*
+        cameraDistance*
+        cp
+    );
+
+    const smoothing=
+        1-
+        Math.pow(
+            .00005,
+            dt
+        );
+
+    camera.position.lerp(
+        camPos,
+        smoothing
+    );
+
+    camLook.set(
+        object.position.x,
+        object.position.y+
+        (mode==="foot"?1.5:2.3),
+        object.position.z
+    );
+
+    camera.lookAt(
+        camLook
+    );
+}
+
+/* =========================================================
+   GPS
+========================================================= */
+
+function updateGPS(){
+
+    let object;
+
+    if(mode==="foot")
+        object=player;
+
+    if(mode==="tractor")
+        object=tractor;
+
+    if(mode==="jcb")
+        object=jcb;
+
+    const dx=
+        targetPosition.x-
+        object.position.x;
+
+    const dz=
+        targetPosition.z-
+        object.position.z;
+
+    const targetAngle=
+        Math.atan2(
+            dx,
+            dz
+        );
+
+    const relative=
+        targetAngle-
+        cameraYaw;
+
+    document
+        .getElementById(
+            "gpsArrow"
+        )
+        .style.transform=
+        "translate(-50%,-80%) rotate("+
+        relative+
+        "rad)";
+}
+
+/* =========================================================
+   UI
+========================================================= */
+
+function updateUI(){
+
+    document
+        .getElementById(
+            "moneyValue"
+        )
+        .textContent=
+        money.toLocaleString(
+            "en-IN"
+        );
+
+    document
+        .getElementById(
+            "scoreValue"
+        )
+        .textContent=
+        score.toLocaleString(
+            "en-IN"
+        );
+
+    document
+        .getElementById(
+            "speed"
+        )
+        .textContent=
+        Math.round(
+            Math.abs(
+                tractorSpeed
+            )*3.6
+        )+
+        " km/h";
+
+    document
+        .getElementById(
+            "mode"
+        )
+        .textContent=
+        mode==="foot"
+        ?"MODE: ON FOOT"
+        :mode==="tractor"
+            ?"MODE: 🚜 TRACTOR"
+            :"MODE: 🏗️ JCB";
+
+    document
+        .getElementById(
+            "jcbControls"
+        )
+        .style.display=
+        mode==="jcb"
+        ?"flex"
+        :"none";
+
+    document
+        .getElementById(
+            "enter"
+        )
+        .innerHTML=
+        mode==="foot"
+        ?"🚪<br>ENTER"
+        :"🚪<br>EXIT";
+}
+
+/* =========================================================
+   proximity
+========================================================= */
+
+function proximity(){
+
+    if(mode!=="foot")
+        return;
+
+    const dt=
+        distance(
+            player.position,
+            tractor.position
+        );
+
+    const dj=
+        distance(
+            player.position,
+            jcb.position
+        );
+
+    if(dt<9){
+
+        setStatus(
+            "🚜 tractor के पास • ENTER दबाएँ"
+        );
+
+    }else if(dj<10){
+
+        setStatus(
+            "🏗️ JCB के पास • ENTER दबाएँ"
+        );
+    }
+}
+
+/* =========================================================
+   resize
+========================================================= */
+
+window.addEventListener(
+    "resize",
+    ()=>{
+
+        camera.aspect=
+            innerWidth/innerHeight;
+
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(
+            innerWidth,
+            innerHeight
+        );
+
+        renderer.setPixelRatio(
+            Math.min(
+                devicePixelRatio,
+                1.7
+            )
+        );
+    }
+);
+
+/* =========================================================
+   initial trailer placement
+========================================================= */
+
+const initialF=
+    forward(
+        tractor.rotation.y
+    );
+
+trolley.position.set(
+    tractor.position.x-
+    initialF.x*7.8,
+    0,
+    tractor.position.z-
+    initialF.z*7.8
+);
+
+trailerYaw=
+    tractor.rotation.y;
+
+updateLoad();
+
+cameraYaw=
+    tractor.rotation.y+
+    Math.PI;
+
+cameraPitch=.38;
+
+cameraDistance=13;
+
+camera.position.set(
+    tractor.position.x-
+    initialF.x*13,
+    7,
+    tractor.position.z-
+    initialF.z*13
+);
+
+camera.lookAt(
+    tractor.position
+);
+
+/* =========================================================
+   main loop
+========================================================= */
+
+const clock=
+    new THREE.Clock();
+
+function animate(){
+
+    requestAnimationFrame(
+        animate
+    );
+
+    const dt=
+        Math.min(
+            clock.getDelta(),
+            .05
+        );
+
+    updateFoot(dt);
+    updateTractor(dt);
+    updateJcb(dt);
+    updateParticles(dt);
+    updateLoad();
+    updateMission();
+    updateGPS();
+    updateCamera(dt);
+    updateUI();
+    proximity();
+
+    /* target animation */
+
+    target.rotation.y+=
+        dt*.25;
+
+    renderer.render(
+        scene,
+        camera
+    );
+}
+
+/* =========================================================
+   start
+========================================================= */
+
+setTimeout(
+    ()=>{
+        document
+            .getElementById(
+                "loading"
+            )
+            .style.display="none";
+
+        animate();
+    },
+    700
+);
+</script>
+
+</body>
+</html>
