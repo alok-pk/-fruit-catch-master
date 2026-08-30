@@ -1,3154 +1,854 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#08130b">
-<title>farm 3d tractor simulator</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>BioLab 3D — Human Anatomy Explorer</title>
 
 <style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    -webkit-tap-highlight-color:transparent;
-}
-html,body{
-    width:100%;
-    height:100%;
+  :root{
+    --bg:#0d1117;
+    --panel:#111823;
+    --panel-edge:#1c2733;
+    --neon:#39ff88;
+    --neon-dim:#1f8a52;
+    --blue:#3fd0ff;
+    --blue-dim:#0f5b74;
+    --text:#dbe6ef;
+    --text-dim:#7f93a6;
+    --danger:#ff4d6d;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:var(--bg);
+    font-family:'Segoe UI', Arial, sans-serif;
+    color:var(--text);
     overflow:hidden;
-    background:#79b6dc;
-    font-family:Arial,sans-serif;
-    touch-action:none;
-}
-#game{
-    position:fixed;
-    inset:0;
-    width:100%;
-    height:100%;
-    overflow:hidden;
-}
-canvas{
-    position:absolute;
-    inset:0;
-    display:block;
-    width:100%;
-    height:100%;
-}
+  }
+  #app{ position:fixed; inset:0; }
+  #canvas-holder{ position:absolute; inset:0; }
+  canvas{ display:block; touch-action:none; }
 
-#loading{
-    position:fixed;
-    inset:0;
-    z-index:999;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-direction:column;
-    gap:12px;
-    color:#fff;
-    background:#07140b;
-    font-size:18px;
-    font-weight:900;
-}
-#loading small{
-    color:#9ca3af;
-    font-size:11px;
-    font-weight:500;
-}
+  /* ---------- glow scanline background ---------- */
+  #app::before{
+    content:"";
+    position:absolute; inset:0; pointer-events:none; z-index:1;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(63,208,255,0.07), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(57,255,136,0.07), transparent 45%);
+  }
 
-#hud{
-    position:fixed;
-    inset:0;
-    z-index:20;
-    pointer-events:none;
-}
+  /* ---------- HEADER ---------- */
+  #header{
+    position:absolute; top:0; left:0; right:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 16px;
+    background:linear-gradient(180deg, rgba(13,17,23,0.95), rgba(13,17,23,0.55));
+    border-bottom:1px solid var(--panel-edge);
+    backdrop-filter:blur(6px);
+  }
+  #logo{
+    display:flex; align-items:center; gap:10px;
+    font-weight:700; letter-spacing:1px; font-size:15px;
+    color:var(--neon); text-shadow:0 0 8px rgba(57,255,136,0.6);
+  }
+  #logo span.sub{
+    display:block; font-size:9px; color:var(--blue); letter-spacing:2px; font-weight:400;
+    text-shadow:0 0 6px rgba(63,208,255,0.6);
+  }
+  .pulse-dot{
+    width:9px; height:9px; border-radius:50%; background:var(--neon);
+    box-shadow:0 0 8px 2px var(--neon);
+    animation:pulseDot 1.2s ease-in-out infinite;
+  }
+  @keyframes pulseDot{0%,100%{opacity:1; transform:scale(1);}50%{opacity:.4; transform:scale(.7);}}
 
-#money{
-    position:absolute;
-    left:14px;
-    top:14px;
-    padding:10px 14px;
-    border-radius:15px;
-    color:white;
-    background:rgba(4,15,8,.78);
-    border:1px solid rgba(255,255,255,.18);
-    box-shadow:0 7px 22px rgba(0,0,0,.3);
-    font-size:15px;
-    font-weight:900;
-}
-
-#mission{
-    position:absolute;
-    left:14px;
-    top:62px;
-    padding:8px 11px;
-    max-width:260px;
-    border-radius:12px;
-    color:#d9f99d;
-    background:rgba(4,15,8,.7);
-    border:1px solid rgba(190,242,100,.18);
-    font-size:11px;
-    font-weight:800;
-}
-
-#status{
-    position:absolute;
-    left:50%;
-    top:14px;
-    transform:translateX(-50%);
-    padding:8px 14px;
-    border-radius:13px;
-    color:#fff;
-    background:rgba(4,12,7,.72);
-    border:1px solid rgba(255,255,255,.16);
-    font-size:11px;
-    font-weight:800;
+  .header-controls{ display:flex; align-items:center; gap:8px; }
+  .toggle-btn{
+    background:var(--panel); border:1px solid var(--panel-edge); color:var(--text-dim);
+    border-radius:20px; padding:6px 12px; font-size:11px; cursor:pointer;
+    display:flex; align-items:center; gap:6px; transition:.2s;
     white-space:nowrap;
-}
+  }
+  .toggle-btn:hover{ border-color:var(--blue); color:var(--blue); }
+  .toggle-btn.active{ border-color:var(--neon); color:var(--neon); box-shadow:0 0 10px rgba(57,255,136,0.25); }
+  #muteBtn.muted{ color:var(--danger); border-color:var(--danger); }
 
-#speed{
-    position:absolute;
-    right:120px;
-    top:22px;
-    color:#fff;
-    background:rgba(4,12,7,.7);
-    padding:8px 10px;
-    border-radius:11px;
-    font-size:11px;
-    font-weight:900;
-}
+  /* ---------- SIDE PANELS ---------- */
+  .side-panel{
+    position:absolute; top:64px; bottom:14px; z-index:15;
+    width:78px; display:flex; flex-direction:column; gap:8px;
+    padding:10px 6px; overflow-y:auto; scrollbar-width:none;
+  }
+  .side-panel::-webkit-scrollbar{ display:none; }
+  #leftPanel{ left:10px; }
 
-#gps{
-    position:absolute;
-    top:12px;
-    right:13px;
-    width:94px;
-    height:94px;
-    border-radius:50%;
-    background:
-        radial-gradient(circle,#1c3c2b,#0a1b10 70%);
-    border:3px solid rgba(255,255,255,.48);
-    box-shadow:0 8px 28px rgba(0,0,0,.4);
-    overflow:hidden;
-}
-#gps:before{
-    content:"";
-    position:absolute;
-    left:50%;
-    top:0;
-    width:1px;
-    height:100%;
-    background:rgba(255,255,255,.13);
-}
-#gps:after{
-    content:"";
-    position:absolute;
-    top:50%;
-    left:0;
-    width:100%;
-    height:1px;
-    background:rgba(255,255,255,.13);
-}
-#gpsArrow{
-    position:absolute;
-    left:50%;
-    top:50%;
-    width:4px;
-    height:37px;
-    transform-origin:50% 80%;
-    background:#ef4444;
-    border-radius:5px;
-}
-#gpsArrow:before{
-    content:"";
-    position:absolute;
-    left:50%;
-    top:-8px;
-    transform:translateX(-50%);
-    border-left:8px solid transparent;
-    border-right:8px solid transparent;
-    border-bottom:17px solid #ef4444;
-}
-#gpsText{
-    position:absolute;
-    bottom:4px;
-    left:50%;
-    transform:translateX(-50%);
-    color:#bbf7d0;
-    font-size:7px;
-    font-weight:900;
-}
+  .organ-btn{
+    background:var(--panel); border:1px solid var(--panel-edge);
+    border-radius:12px; padding:8px 4px; cursor:pointer; text-align:center;
+    color:var(--text-dim); transition:.2s; position:relative;
+  }
+  .organ-btn:hover{ border-color:var(--blue); color:var(--blue); transform:translateY(-2px); }
+  .organ-btn.selected{
+    border-color:var(--neon); color:var(--neon);
+    box-shadow:0 0 12px rgba(57,255,136,0.35), inset 0 0 8px rgba(57,255,136,0.15);
+  }
+  .organ-btn .icon{ font-size:20px; display:block; margin-bottom:3px; filter:drop-shadow(0 0 3px currentColor);}
+  .organ-btn .label{ font-size:9px; letter-spacing:.5px; line-height:1.2; display:block; }
+  .organ-btn.heart-btn{
+    border-color:var(--danger);
+    background:linear-gradient(160deg, rgba(255,77,109,0.12), var(--panel));
+  }
+  .organ-btn.heart-btn .icon{ color:var(--danger); animation:heartIcon 1.5s ease-in-out infinite; }
+  @keyframes heartIcon{0%,100%{transform:scale(1);}25%{transform:scale(1.18);}40%{transform:scale(1);}55%{transform:scale(1.12);}70%{transform:scale(1);}}
 
-#mode{
-    position:absolute;
-    left:50%;
-    bottom:126px;
-    transform:translateX(-50%);
-    padding:7px 12px;
-    border-radius:11px;
-    background:rgba(4,12,7,.72);
-    color:#fff;
-    font-size:10px;
-    font-weight:900;
-}
+  /* ---------- INFO CARD ---------- */
+  #infoCard{
+    position:absolute; left:50%; bottom:16px; transform:translateX(-50%) translateY(140%);
+    z-index:20; width:min(92%, 480px);
+    background:linear-gradient(160deg, rgba(17,24,35,0.96), rgba(13,17,23,0.96));
+    border:1px solid var(--neon-dim); border-radius:16px;
+    padding:16px 18px; box-shadow:0 0 30px rgba(57,255,136,0.12), 0 10px 40px rgba(0,0,0,0.5);
+    transition:transform .45s cubic-bezier(.2,.9,.25,1), opacity .3s;
+    opacity:0;
+  }
+  #infoCard.show{ transform:translateX(-50%) translateY(0); opacity:1; }
+  #infoCard .close-x{
+    position:absolute; top:10px; right:12px; cursor:pointer; color:var(--text-dim);
+    font-size:16px; line-height:1;
+  }
+  #infoCard .close-x:hover{ color:var(--danger); }
+  #infoName{
+    font-size:20px; font-weight:700; color:var(--neon); text-shadow:0 0 8px rgba(57,255,136,0.5);
+    margin:0 0 4px 0; display:flex; align-items:center; gap:10px;
+  }
+  #infoPronounce{ font-size:12px; color:var(--blue); margin:0 0 8px 0; letter-spacing:.3px; }
+  #infoDesc{ font-size:13.5px; line-height:1.5; color:var(--text); margin:0 0 10px 0; }
+  #listenBtn{
+    background:rgba(63,208,255,0.1); border:1px solid var(--blue-dim); color:var(--blue);
+    border-radius:20px; padding:7px 16px; font-size:12px; cursor:pointer; transition:.2s;
+  }
+  #listenBtn:hover{ background:rgba(63,208,255,0.2); box-shadow:0 0 10px rgba(63,208,255,0.3); }
 
-/* camera touch area */
-#cameraTouch{
-    position:absolute;
-    right:0;
-    top:0;
-    width:65%;
-    height:100%;
-    pointer-events:auto;
-    touch-action:none;
-}
+  /* ---------- LOADER ---------- */
+  #loader{
+    position:absolute; inset:0; z-index:50; background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    transition:opacity .6s ease;
+  }
+  #loader .ring{
+    width:56px; height:56px; border-radius:50%;
+    border:3px solid rgba(57,255,136,0.15); border-top-color:var(--neon);
+    animation:spin 1s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loader p{ color:var(--text-dim); font-size:12px; letter-spacing:2px; }
 
-/* joystick */
-#joystick{
-    position:absolute;
-    left:18px;
-    bottom:25px;
-    width:130px;
-    height:130px;
-    border-radius:50%;
-    background:rgba(8,18,12,.32);
-    border:2px solid rgba(255,255,255,.18);
-    box-shadow:
-        inset 0 0 25px rgba(255,255,255,.05),
-        0 7px 25px rgba(0,0,0,.25);
-    pointer-events:auto;
-    touch-action:none;
-}
-#stick{
-    position:absolute;
-    width:62px;
-    height:62px;
-    left:34px;
-    top:34px;
-    border-radius:50%;
-    background:
-        radial-gradient(circle at 35% 30%,#738277,#1c2b21);
-    border:2px solid rgba(255,255,255,.32);
-    box-shadow:
-        0 6px 18px rgba(0,0,0,.42),
-        inset 0 2px rgba(255,255,255,.25);
-    pointer-events:none;
-}
+  /* ---------- HINT ---------- */
+  #hint{
+    position:absolute; top:64px; left:50%; transform:translateX(-50%);
+    z-index:10; font-size:11px; color:var(--text-dim); letter-spacing:.5px;
+    background:rgba(13,17,23,0.6); padding:5px 12px; border-radius:20px;
+    border:1px solid var(--panel-edge); pointer-events:none; transition:opacity .5s;
+  }
 
-/* action buttons */
-#actions{
-    position:absolute;
-    right:17px;
-    bottom:22px;
-    display:flex;
-    align-items:flex-end;
-    gap:10px;
-    pointer-events:auto;
-}
+  /* heartbeat vignette pulse when heart active */
+  #bpmBadge{
+    position:absolute; top:64px; right:16px; z-index:16;
+    background:rgba(255,77,109,0.12); border:1px solid var(--danger); color:#ffb3c0;
+    border-radius:20px; padding:5px 12px; font-size:11px; display:none; align-items:center; gap:6px;
+    letter-spacing:.5px;
+  }
+  #bpmBadge.show{ display:flex; }
+  #bpmBadge .dot{ width:7px; height:7px; border-radius:50%; background:var(--danger); box-shadow:0 0 6px var(--danger); animation:pulseDot .75s ease-in-out infinite; }
 
-.action{
-    width:59px;
-    height:59px;
-    border:1px solid rgba(255,255,255,.27);
-    border-radius:50%;
-    color:#fff;
-    background:
-        linear-gradient(145deg,rgba(55,70,61,.96),rgba(7,18,11,.96));
-    box-shadow:
-        0 7px 20px rgba(0,0,0,.42),
-        inset 0 2px rgba(255,255,255,.2);
-    font-size:21px;
-    font-weight:900;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    user-select:none;
-    touch-action:none;
-    position:relative;
-    overflow:hidden;
-}
-.action:active,
-.action.active{
-    transform:scale(.93);
-}
-#gas{
-    width:72px;
-    height:72px;
-    background:linear-gradient(145deg,#2e914c,#092914);
-}
-#enter{
-    width:78px;
-    height:50px;
-    border-radius:17px;
-    font-size:10px;
-    text-align:center;
-}
-.ripple{
-    position:absolute;
-    width:8px;
-    height:8px;
-    border-radius:50%;
-    background:rgba(255,255,255,.5);
-    transform:scale(0);
-    animation:ripple .55s ease-out;
-    pointer-events:none;
-}
-@keyframes ripple{
-    to{
-        transform:scale(12);
-        opacity:0;
-    }
-}
-
-#jcbControls{
-    position:absolute;
-    right:17px;
-    bottom:100px;
-    display:none;
-    gap:7px;
-    pointer-events:auto;
-}
-.jcb{
-    width:48px;
-    height:48px;
-    border-radius:15px;
-    border:1px solid rgba(255,255,255,.25);
-    color:#fff;
-    font-size:18px;
-    font-weight:900;
-    background:linear-gradient(145deg,#e3a900,#5b3505);
-    box-shadow:0 6px 15px rgba(0,0,0,.35);
-}
-#dig{
-    background:linear-gradient(145deg,#bd6615,#481a05);
-}
-#dump{
-    background:linear-gradient(145deg,#64748b,#111827);
-}
-
-#help{
-    position:absolute;
-    bottom:5px;
-    left:50%;
-    transform:translateX(-50%);
-    color:rgba(255,255,255,.55);
-    font-size:8px;
-    white-space:nowrap;
-}
-
-@media(max-width:700px){
-    #status{
-        top:110px;
-        max-width:58vw;
-        overflow:hidden;
-        text-overflow:ellipsis;
-    }
-    #speed{
-        top:73px;
-        right:115px;
-    }
-    #gps{
-        width:82px;
-        height:82px;
-    }
-    #joystick{
-        width:118px;
-        height:118px;
-    }
-    #stick{
-        width:58px;
-        height:58px;
-        left:29px;
-        top:29px;
-    }
-    #actions{
-        gap:7px;
-        right:10px;
-    }
-    .action{
-        width:53px;
-        height:53px;
-    }
-    #gas{
-        width:65px;
-        height:65px;
-    }
-    #mode{
-        bottom:116px;
-    }
-}
-
-@media(orientation:landscape) and (max-height:500px){
-    #joystick{
-        bottom:15px;
-        left:15px;
-    }
-    #actions{
-        bottom:14px;
-    }
-    #jcbControls{
-        bottom:78px;
-    }
-    #mode{
-        bottom:83px;
-    }
-}
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width:640px){
+    .side-panel{ width:60px; top:58px; }
+    .organ-btn .label{ font-size:7.5px; }
+    .organ-btn .icon{ font-size:16px; }
+    #logo{ font-size:12px; }
+    #logo span.sub{ font-size:7px; }
+    .toggle-btn{ padding:5px 8px; font-size:9.5px; }
+    #infoName{ font-size:16px; }
+    #infoDesc{ font-size:12px; }
+    #hint{ font-size:9px; top:56px; }
+    #bpmBadge{ top:56px; font-size:9px; padding:4px 8px; }
+  }
 </style>
 </head>
-
 <body>
+<div id="app">
 
-<div id="game"></div>
+  <div id="loader">
+    <div class="ring"></div>
+    <p>INITIALIZING ANATOMY LAB…</p>
+  </div>
 
-<div id="loading">
-    loading farm world...
-    <small>starting 3d engine</small>
-</div>
-
-<div id="hud">
-
-    <div id="money">
-        💰 ₹<span id="moneyValue">0</span>
-        &nbsp; ⭐ <span id="scoreValue">0</span>
+  <div id="header">
+    <div id="logo">
+      <span class="pulse-dot"></span>
+      <span>
+        BIOLAB 3D
+        <span class="sub" id="headerSub">HUMAN ANATOMY EXPLORER</span>
+      </span>
     </div>
-
-    <div id="mission">
-        🎯 collect sand from the JCB
+    <div class="header-controls">
+      <button class="toggle-btn" id="genderBtn">♂ <span id="genderLabel">MALE</span></button>
+      <button class="toggle-btn" id="langBtn">🌐 <span id="langLabel">EN</span></button>
+      <button class="toggle-btn" id="muteBtn">🔊 <span id="muteLabel">SOUND</span></button>
     </div>
+  </div>
 
-    <div id="status">
-        walk to the tractor
-    </div>
+  <div id="hint">Drag to rotate • Scroll / Pinch to zoom • Tap a body part</div>
+  <div id="bpmBadge"><span class="dot"></span><span id="bpmText">80 BPM</span></div>
 
-    <div id="speed">0 km/h</div>
+  <div class="side-panel" id="leftPanel"></div>
 
-    <div id="gps">
-        <div id="gpsArrow"></div>
-        <div id="gpsText">TARGET</div>
-    </div>
+  <div id="canvas-holder"></div>
 
-    <div id="mode">MODE: ON FOOT</div>
-
-    <div id="cameraTouch"></div>
-
-    <div id="joystick">
-        <div id="stick"></div>
-    </div>
-
-    <div id="actions">
-
-        <button class="action" id="brake">▼</button>
-
-        <button class="action" id="enter">
-            🚪<br>ENTER
-        </button>
-
-        <button class="action" id="gas">▲</button>
-
-    </div>
-
-    <div id="jcbControls">
-        <button class="jcb" id="boomUp">⬆</button>
-        <button class="jcb" id="boomDown">⬇</button>
-        <button class="jcb" id="dig">⛏</button>
-        <button class="jcb" id="dump">🪣</button>
-    </div>
-
-    <div id="help">
-        left joystick = move / drive • right side swipe = camera • enter = vehicle
-    </div>
+  <div id="infoCard">
+    <span class="close-x" id="closeInfo">✕</span>
+    <h2 id="infoName">—</h2>
+    <p id="infoPronounce">—</p>
+    <p id="infoDesc">—</p>
+    <button id="listenBtn">🔊 Listen</button>
+  </div>
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
 
-<script>
-"use strict";
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 /* =========================================================
-   renderer
+   DATA — organ / system info (EN + HI)
 ========================================================= */
+const DATA = {
+  skull: {
+    icon:'💀', key:'skull',
+    en:{ name:'Skull', pronounce:'Pronunciation: SKUHL', desc:'The skull is a hard bony helmet that protects your brain. It also gives your face its shape!' },
+    hi:{ name:'खोपड़ी', pronounce:'इसे पढ़ें: खोप-ड़ी', desc:'खोपड़ी एक कठोर हड्डी का ढांचा है जो आपके दिमाग की रक्षा करता है और चेहरे को आकार देता है।' }
+  },
+  brain: {
+    icon:'🧠', key:'brain',
+    en:{ name:'Brain', pronounce:'Pronunciation: BRAYN', desc:'The brain is your body\u2019s control center — it helps you think, move, and feel everything around you.' },
+    hi:{ name:'दिमाग', pronounce:'इसे पढ़ें: दि-माग', desc:'दिमाग आपके शरीर का कंट्रोल सेंटर है, यह आपको सोचने, चलने और महसूस करने में मदद करता है।' }
+  },
+  heart: {
+    icon:'❤️', key:'heart',
+    en:{ name:'Heart', pronounce:'Pronunciation: HAART | इसे पढ़ें: हार्ट', desc:'The heart is a strong pump that beats non-stop, pushing blood full of oxygen to every part of your body!' },
+    hi:{ name:'हृदय / दिल', pronounce:'इसे पढ़ें: हृ-दय / दिल', desc:'हृदय एक शक्तिशाली पंप है जो लगातार धड़कता है और ऑक्सीजन भरा खून पूरे शरीर में भेजता है!' }
+  },
+  skeleton: {
+    icon:'🦴', key:'skeleton',
+    en:{ name:'Skeleton', pronounce:'Pronunciation: SKEL-ih-tn', desc:'Your skeleton is made of 206 bones! It gives your body shape and lets you stand tall and move around.' },
+    hi:{ name:'कंकाल', pronounce:'इसे पढ़ें: कं-काल', desc:'आपका कंकाल 206 हड्डियों से बना है! यह शरीर को आकार देता है और आपको खड़े होने में मदद करता है।' }
+  },
+  muscles: {
+    icon:'💪', key:'muscles',
+    en:{ name:'Muscles', pronounce:'Pronunciation: MUHS-uhls', desc:'Muscles are stretchy tissues that pull on your bones so you can run, jump, and even smile!' },
+    hi:{ name:'मांसपेशियां', pronounce:'इसे पढ़ें: मां-स-पे-शि-यां', desc:'मांसपेशियां हड्डियों को खींचती हैं जिससे आप दौड़ सकते हैं, कूद सकते हैं और मुस्कुरा भी सकते हैं!' }
+  },
+  nerves: {
+    icon:'⚡', key:'nerves',
+    en:{ name:'Nerves', pronounce:'Pronunciation: NURVZ', desc:'Nerves are like tiny electric wires that carry messages between your brain and the rest of your body.' },
+    hi:{ name:'तंत्रिकाएं', pronounce:'इसे पढ़ें: तं-त्रि-का-एं', desc:'तंत्रिकाएं छोटे बिजली के तारों की तरह होती हैं जो दिमाग और शरीर के बीच संदेश ले जाती हैं।' }
+  },
+  lungs: {
+    icon:'🫁', key:'lungs',
+    en:{ name:'Lungs', pronounce:'Pronunciation: LUHNGZ', desc:'Your lungs breathe in fresh air and send oxygen into your blood so your whole body can work.' },
+    hi:{ name:'फेफड़े', pronounce:'इसे पढ़ें: फे-फ-ड़े', desc:'फेफड़े ताज़ी हवा अंदर लेते हैं और ऑक्सीजन खून में भेजते हैं ताकि पूरा शरीर काम कर सके।' }
+  },
+  arm: {
+    icon:'💪', key:'arm',
+    en:{ name:'Arm Bones', pronounce:'Pronunciation: AARM BOHNZ', desc:'Arm bones connect at the shoulder and elbow, working like levers so you can lift and grab things.' },
+    hi:{ name:'बांह की हड्डियां', pronounce:'इसे पढ़ें: बांह की हड्डि-यां', desc:'बांह की हड्डियां कंधे और कोहनी से जुड़ती हैं, जिससे आप चीज़ें उठा और पकड़ सकते हैं।' }
+  },
+  leg: {
+    icon:'🦵', key:'leg',
+    en:{ name:'Leg Bones', pronounce:'Pronunciation: LEG BOHNZ', desc:'Your leg bones are the longest and strongest bones — they carry your whole body when you walk or run.' },
+    hi:{ name:'पैर की हड्डियां', pronounce:'इसे पढ़ें: पैर की हड्डि-यां', desc:'आपके पैर की हड्डियां सबसे लंबी और मज़बूत होती हैं, ये चलने-दौड़ने में शरीर को सहारा देती हैं।' }
+  },
+  spine: {
+    icon:'🦴', key:'spine',
+    en:{ name:'Spine', pronounce:'Pronunciation: SPAHYN', desc:'The spine is a stack of small bones that lets you bend and twist, while protecting your nerve cord.' },
+    hi:{ name:'रीढ़ की हड्डी', pronounce:'इसे पढ़ें: री-ढ़ की हड्डी', desc:'रीढ़ की हड्डी छोटी हड्डियों का ढेर है जो आपको झुकने में मदद करती है और तंत्रिका को सुरक्षित रखती है।' }
+  }
+};
 
-if(typeof THREE==="undefined"){
-    document.getElementById("loading").innerHTML =
-        "three.js could not load<br><small>check internet connection and reload</small>";
-    throw new Error("three.js failed to load");
-}
-
-const scene = new THREE.Scene();
-
-scene.background =
-    new THREE.Color(0x86c4e7);
-
-scene.fog =
-    new THREE.Fog(
-        0x86c4e7,
-        150,
-        520
-    );
-
-const camera =
-    new THREE.PerspectiveCamera(
-        60,
-        innerWidth/innerHeight,
-        .1,
-        800
-    );
-
-const renderer =
-    new THREE.WebGLRenderer({
-        antialias:true,
-        alpha:false,
-        powerPreference:"high-performance"
-    });
-
-renderer.setPixelRatio(
-    Math.min(devicePixelRatio,1.7)
-);
-
-renderer.setSize(
-    innerWidth,
-    innerHeight
-);
-
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=
-    THREE.PCFSoftShadowMap;
-
-renderer.outputEncoding=
-    THREE.sRGBEncoding;
-
-renderer.toneMapping=
-    THREE.ACESFilmicToneMapping;
-
-renderer.toneMappingExposure=1.1;
-
-document
-    .getElementById("game")
-    .appendChild(renderer.domElement);
+const SIDEBAR_ITEMS = ['skull','brain','heart','skeleton','muscles','nerves'];
 
 /* =========================================================
-   lighting
+   STATE
 ========================================================= */
-
-const ambient =
-    new THREE.HemisphereLight(
-        0xdff6ff,
-        0x315129,
-        1.7
-    );
-
-scene.add(ambient);
-
-const sun =
-    new THREE.DirectionalLight(
-        0xffefc4,
-        2.5
-    );
-
-sun.position.set(
-    100,
-    170,
-    90
-);
-
-sun.castShadow=true;
-
-sun.shadow.mapSize.set(
-    2048,
-    2048
-);
-
-sun.shadow.camera.left=-180;
-sun.shadow.camera.right=180;
-sun.shadow.camera.top=180;
-sun.shadow.camera.bottom=-180;
-sun.shadow.camera.near=1;
-sun.shadow.camera.far=450;
-
-scene.add(sun);
-
-/* =========================================================
-   materials
-========================================================= */
-
-function mat(
-    color,
-    rough=.8,
-    metal=0
-){
-    return new THREE.MeshStandardMaterial({
-        color:color,
-        roughness:rough,
-        metalness:metal
-    });
-}
-
-const grass=mat(0x438235,1);
-const road=mat(0x292e34,.98);
-const roadLine=mat(0xfacc15,.7);
-const red=mat(0xc91414,.55);
-const redDark=mat(0x861010,.7);
-const black=mat(0x080a0b,.95);
-const rubber=mat(0x101214,.98);
-const steel=mat(0x59636e,.4,.65);
-const blue=mat(0x1268a5,.58,.1);
-const blueDark=mat(0x0b4772,.7);
-const yellow=mat(0xf0b800,.52);
-const dirt=mat(0x71492d,1);
-const wood=mat(0x58381f,1);
-const leaves=mat(0x1f6b2b,1);
-const sand=mat(0xa87842,1);
-
-const glass =
-    new THREE.MeshStandardMaterial({
-        color:0x8fd4ef,
-        roughness:.08,
-        metalness:.12,
-        transparent:true,
-        opacity:.52
-    });
-
-function box(
-    w,h,d,
-    material,
-    x=0,y=0,z=0
-){
-    const m=
-        new THREE.Mesh(
-            new THREE.BoxGeometry(
-                w,h,d
-            ),
-            material
-        );
-
-    m.position.set(x,y,z);
-
-    m.castShadow=true;
-    m.receiveShadow=true;
-
-    return m;
-}
-
-function cylinder(
-    r,h,
-    material,
-    x=0,y=0,z=0,
-    segments=16
-){
-    const m=
-        new THREE.Mesh(
-            new THREE.CylinderGeometry(
-                r,r,h,segments
-            ),
-            material
-        );
-
-    m.position.set(x,y,z);
-
-    m.castShadow=true;
-    m.receiveShadow=true;
-
-    return m;
-}
-
-/* =========================================================
-   grass
-========================================================= */
-
-const grassCanvas =
-    document.createElement("canvas");
-
-grassCanvas.width=128;
-grassCanvas.height=128;
-
-const gc=
-    grassCanvas.getContext("2d");
-
-gc.fillStyle="#438235";
-gc.fillRect(0,0,128,128);
-
-for(let i=0;i<1100;i++){
-
-    const colors=[
-        "#4b8b39",
-        "#3b7731",
-        "#558e40",
-        "#32682b",
-        "#60984b"
-    ];
-
-    gc.fillStyle=
-        colors[
-            Math.floor(
-                Math.random()*colors.length
-            )
-        ];
-
-    gc.fillRect(
-        Math.random()*128,
-        Math.random()*128,
-        1+Math.random()*2,
-        1+Math.random()*2
-    );
-}
-
-const grassTexture=
-    new THREE.CanvasTexture(
-        grassCanvas
-    );
-
-grassTexture.wrapS=
-    THREE.RepeatWrapping;
-
-grassTexture.wrapT=
-    THREE.RepeatWrapping;
-
-grassTexture.repeat.set(60,60);
-
-const ground=
-    new THREE.Mesh(
-        new THREE.PlaneGeometry(
-            600,
-            600
-        ),
-        new THREE.MeshStandardMaterial({
-            map:grassTexture,
-            roughness:1
-        })
-    );
-
-ground.rotation.x=-Math.PI/2;
-ground.receiveShadow=true;
-
-scene.add(ground);
-
-/* =========================================================
-   roads
-========================================================= */
-
-function roadLineSet(
-    x,z,length,horizontal
-){
-
-    const dash=5;
-    const gap=5;
-
-    for(
-        let p=-length/2+5;
-        p<length/2;
-        p+=dash+gap
-    ){
-
-        const l=
-            box(
-                horizontal?dash:.3,
-                .055,
-                horizontal?.3:dash,
-                roadLine,
-                horizontal?x+p:x,
-                .06,
-                horizontal?z:z+p
-            );
-
-        scene.add(l);
-    }
-}
-
-function makeRoad(
-    x,z,width,length,horizontal
-){
-
-    const r=
-        box(
-            horizontal?length:width,
-            .08,
-            horizontal?width:length,
-            road,
-            x,
-            .035,
-            z
-        );
-
-    scene.add(r);
-
-    roadLineSet(
-        x,z,length,horizontal
-    );
-}
-
-makeRoad(
-    0,0,
-    18,480,
-    false
-);
-
-makeRoad(
-    0,0,
-    18,480,
-    true
-);
-
-makeRoad(
-    105,0,
-    14,480,
-    false
-);
-
-makeRoad(
-    0,105,
-    14,480,
-    true
-);
-
-makeRoad(
-    -105,0,
-    14,350,
-    false
-);
-
-/* =========================================================
-   trees
-========================================================= */
-
-function makeTree(
-    x,z,s=1
-){
-
-    const g=
-        new THREE.Group();
-
-    g.position.set(
-        x,0,z
-    );
-
-    g.scale.setScalar(s);
-
-    const trunk=
-        cylinder(
-            .48,
-            4,
-            wood,
-            0,2,0,
-            10
-        );
-
-    g.add(trunk);
-
-    const c1=
-        new THREE.Mesh(
-            new THREE.SphereGeometry(
-                2.5,14,11
-            ),
-            leaves
-        );
-
-    c1.position.y=5.2;
-    c1.castShadow=true;
-
-    g.add(c1);
-
-    const c2=
-        new THREE.Mesh(
-            new THREE.SphereGeometry(
-                1.7,12,10
-            ),
-            leaves
-        );
-
-    c2.position.set(
-        1.1,
-        6,
-        .3
-    );
-
-    c2.castShadow=true;
-
-    g.add(c2);
-
-    scene.add(g);
-}
-
-/* =========================================================
-   buildings
-========================================================= */
-
-function makeBuilding(
-    x,z,w,h,d,color
-){
-
-    const g=
-        new THREE.Group();
-
-    g.position.set(x,0,z);
-
-    const body=
-        box(
-            w,h,d,
-            mat(color,.76),
-            0,h/2,0
-        );
-
-    g.add(body);
-
-    const floors=
-        Math.floor(h/3.3);
-
-    const winMat=
-        new THREE.MeshStandardMaterial({
-            color:0xa4dcf0,
-            roughness:.08,
-            metalness:.1
-        });
-
-    for(
-        let f=0;
-        f<floors;
-        f++
-    ){
-
-        const y=
-            1.8+f*3.2;
-
-        if(y>h-1)
-            continue;
-
-        for(
-            let c=0;
-            c<Math.floor(w/3);
-            c++
-        ){
-
-            const xx=
-                -w/2+1.3+c*3;
-
-            const a=
-                box(
-                    1.15,
-                    1.2,
-                    .08,
-                    winMat,
-                    xx,y,d/2+.05
-                );
-
-            const b=
-                box(
-                    1.15,
-                    1.2,
-                    .08,
-                    winMat,
-                    xx,y,-d/2-.05
-                );
-
-            g.add(a,b);
-        }
-    }
-
-    scene.add(g);
-}
-
-const buildingColors=[
-    0x64748b,
-    0x475569,
-    0x7b8794,
-    0x94a3b8,
-    0x596575
-];
-
-for(let i=0;i<35;i++){
-
-    const side=
-        i%2===0?1:-1;
-
-    const z=
-        -215+
-        (i*29)%420;
-
-    const x=
-        side*(19+(i%4)*8);
-
-    makeBuilding(
-        x,
-        z,
-        8+(i%3)*3,
-        18+(i%5)*8,
-        8+(i%2)*3,
-        buildingColors[
-            i%buildingColors.length
-        ]
-    );
-}
-
-/* trees */
-
-for(let i=0;i<100;i++){
-
-    const x=
-        -245+Math.random()*490;
-
-    const z=
-        -245+Math.random()*490;
-
-    if(
-        Math.abs(x)<13 ||
-        Math.abs(z)<13
-    )
-        continue;
-
-    makeTree(
-        x,z,
-        .65+Math.random()*.8
-    );
-}
-
-/* =========================================================
-   sand pit
-========================================================= */
-
-const pit=
-    new THREE.Mesh(
-        new THREE.CircleGeometry(
-            19,40
-        ),
-        sand
-    );
-
-pit.rotation.x=-Math.PI/2;
-pit.position.set(
-    -62,.07,-65
-);
-
-pit.receiveShadow=true;
-
-scene.add(pit);
-
-const pitOuter=
-    new THREE.Mesh(
-        new THREE.RingGeometry(
-            19,21,40
-        ),
-        mat(0x72502e,1)
-    );
-
-pitOuter.rotation.x=-Math.PI/2;
-pitOuter.position.set(
-    -62,.08,-65
-);
-
-scene.add(pitOuter);
-
-/* =========================================================
-   target
-========================================================= */
-
-const target=
-    new THREE.Group();
-
-target.position.set(
-    125,.1,125
-);
-
-const targetPad=
-    new THREE.Mesh(
-        new THREE.CylinderGeometry(
-            12,12,.15,32
-        ),
-        mat(0x155e37,.8)
-    );
-
-targetPad.receiveShadow=true;
-
-target.add(targetPad);
-
-const ring=
-    new THREE.Mesh(
-        new THREE.RingGeometry(
-            8,9,32
-        ),
-        mat(0xfacc15,.55)
-    );
-
-ring.rotation.x=-Math.PI/2;
-ring.position.y=.1;
-
-target.add(ring);
-
-scene.add(target);
-
-/* =========================================================
-   tractor
-========================================================= */
-
-const tractor=
-    new THREE.Group();
-
-tractor.position.set(
-    25,0,28
-);
-
-tractor.rotation.y=Math.PI;
-
-scene.add(tractor);
-
-const tractorBody=
-    box(
-        4.5,2,6,
-        red,
-        0,2.05,0
-    );
-
-tractor.add(tractorBody);
-
-const frontHood=
-    box(
-        3.5,1.6,2.6,
-        red,
-        0,3.5,1.8
-    );
-
-tractor.add(frontHood);
-
-const grille=
-    box(
-        3.05,1.15,.18,
-        black,
-        0,3.25,3.13
-    );
-
-tractor.add(grille);
-
-function tractorWheel(
-    x,z,r,w
-){
-
-    const wheel=
-        new THREE.Mesh(
-            new THREE.CylinderGeometry(
-                r,r,w,24
-            ),
-            rubber
-        );
-
-    wheel.rotation.z=
-        Math.PI/2;
-
-    wheel.position.set(
-        x,r,z
-    );
-
-    wheel.castShadow=true;
-    wheel.receiveShadow=true;
-
-    tractor.add(wheel);
-
-    const hub=
-        new THREE.Mesh(
-            new THREE.CylinderGeometry(
-                r*.27,
-                r*.27,
-                w+.06,
-                16
-            ),
-            steel
-        );
-
-    hub.rotation.z=
-        Math.PI/2;
-
-    hub.position.copy(
-        wheel.position
-    );
-
-    tractor.add(hub);
-
-    return wheel;
-}
-
-const rearLeft=
-    tractorWheel(
-        -2.45,-1.45,
-        2,.9
-    );
-
-const rearRight=
-    tractorWheel(
-        2.45,-1.45,
-        2,.9
-    );
-
-const frontLeft=
-    tractorWheel(
-        -1.5,2.25,
-        1.08,.62
-    );
-
-const frontRight=
-    tractorWheel(
-        1.5,2.25,
-        1.08,.62
-    );
-
-/* seat */
-
-tractor.add(
-    box(
-        2.1,.35,1.8,
-        black,
-        0,4.1,-.4
-    )
-);
-
-tractor.add(
-    box(
-        2.1,1.9,.28,
-        black,
-        0,4.85,-1.15
-    )
-);
-
-/* steering wheel */
-
-const steering=
-    new THREE.Mesh(
-        new THREE.TorusGeometry(
-            .55,.08,8,24
-        ),
-        black
-    );
-
-steering.position.set(
-    0,4.95,.95
-);
-
-steering.rotation.x=
-    Math.PI/2;
-
-tractor.add(steering);
-
-/* steering column */
-
-const column=
-    cylinder(
-        .09,
-        1.2,
-        steel,
-        0,4.45,.72,
-        10
-    );
-
-column.rotation.x=-.35;
-
-tractor.add(column);
-
-/* exhaust */
-
-const exhaust=
-    cylinder(
-        .18,
-        2.8,
-        steel,
-        1.35,5,1.95,
-        12
-    );
-
-tractor.add(exhaust);
-
-tractor.add(
-    cylinder(
-        .25,.15,
-        black,
-        1.35,6.4,1.95,
-        12
-    )
-);
-
-/* hitch */
-
-tractor.add(
-    box(
-        .45,.35,2.2,
-        steel,
-        0,1.35,-3.8
-    )
-);
-
-/* =========================================================
-   trolley
-========================================================= */
-
-const trolley=
-    new THREE.Group();
-
-scene.add(trolley);
-
-trolley.rotation.y=
-    tractor.rotation.y;
-
-const trolleyBody=
-    box(
-        6,2.2,7.5,
-        blue,
-        0,2.2,0
-    );
-
-trolley.add(trolleyBody);
-
-trolley.add(
-    box(
-        .3,2,7.7,
-        blueDark,
-        -3.05,3.25,0
-    )
-);
-
-trolley.add(
-    box(
-        .3,2,7.7,
-        blueDark,
-        3.05,3.25,0
-    )
-);
-
-trolley.add(
-    box(
-        6.1,2,.3,
-        blueDark,
-        0,3.25,-3.75
-    )
-);
-
-trolley.add(
-    box(
-        .45,.35,2.8,
-        steel,
-        0,1.35,-4.9
-    )
-);
-
-function trailerWheel(
-    x,z
-){
-
-    const w=
-        new THREE.Mesh(
-            new THREE.CylinderGeometry(
-                1.1,1.1,.65,20
-            ),
-            rubber
-        );
-
-    w.rotation.z=
-        Math.PI/2;
-
-    w.position.set(
-        x,1.1,z
-    );
-
-    w.castShadow=true;
-
-    trolley.add(w);
-}
-
-trailerWheel(-3.15,-1.9);
-trailerWheel(3.15,-1.9);
-trailerWheel(-3.15,1.9);
-trailerWheel(3.15,1.9);
-
-/* dirt load */
-
-const dirtLoad=
-    new THREE.Group();
-
-trolley.add(dirtLoad);
-
-for(let i=0;i<22;i++){
-
-    const p=
-        new THREE.Mesh(
-            new THREE.DodecahedronGeometry(
-                .45+Math.random()*.55,
-                0
-            ),
-            dirt
-        );
-
-    p.position.set(
-        -2.4+Math.random()*4.8,
-        3.25+Math.random()*1.5,
-        -2.8+Math.random()*5.5
-    );
-
-    p.scale.y=
-        .65+Math.random()*.7;
-
-    p.castShadow=true;
-
-    dirtLoad.add(p);
-}
-
-dirtLoad.visible=false;
-
-/* =========================================================
-   jcb
-========================================================= */
-
-const jcb=
-    new THREE.Group();
-
-jcb.position.set(
-    -62,0,-53
-);
-
-jcb.rotation.y=-.4;
-
-scene.add(jcb);
-
-/* tracks */
-
-function jcbTrack(x){
-
-    const t=
-        box(
-            2.2,1.7,7,
-            rubber,
-            x,.95,0
-        );
-
-    jcb.add(t);
-
-    for(let i=0;i<5;i++){
-
-        const w=
-            new THREE.Mesh(
-                new THREE.CylinderGeometry(
-                    .52,.52,2.25,16
-                ),
-                steel
-            );
-
-        w.rotation.z=
-            Math.PI/2;
-
-        w.position.set(
-            x,.9,
-            -2.5+i*1.25
-        );
-
-        w.castShadow=true;
-
-        jcb.add(w);
-    }
-}
-
-jcbTrack(-2.2);
-jcbTrack(2.2);
-
-/* base */
-
-jcb.add(
-    box(
-        6,1.3,4.5,
-        yellow,
-        0,2.05,0
-    )
-);
-
-/* counterweight */
-
-jcb.add(
-    box(
-        4.8,2.2,2.3,
-        yellow,
-        0,3.2,-1.2
-    )
-);
-
-/* cabin */
-
-const cabin=
-    new THREE.Group();
-
-cabin.position.set(
-    .55,3.15,-.25
-);
-
-jcb.add(cabin);
-
-cabin.add(
-    box(
-        3.8,3.4,3.4,
-        yellow,
-        0,0,0
-    )
-);
-
-cabin.add(
-    box(
-        3.05,2.05,.08,
-        glass,
-        0,.35,1.73
-    )
-);
-
-cabin.add(
-    box(
-        .08,2.05,2.6,
-        glass,
-        -1.93,.35,0
-    )
-);
-
-cabin.add(
-    box(
-        .08,2.05,2.6,
-        glass,
-        1.93,.35,0
-    )
-);
-
-/* boom */
-
-const boomPivot=
-    new THREE.Group();
-
-boomPivot.position.set(
-    -2.4,4,.8
-);
-
-jcb.add(boomPivot);
-
-const boom=
-    box(
-        1.25,1.25,6.5,
-        yellow,
-        0,0,2.8
-    );
-
-boom.rotation.x=-.55;
-
-boomPivot.add(boom);
-
-const dipper=
-    new THREE.Group();
-
-dipper.position.set(
-    0,-1.05,5.9
-);
-
-boom.add(dipper);
-
-const stick=
-    box(
-        .9,.9,5.4,
-        yellow,
-        0,0,2.5
-    );
-
-stick.rotation.x=.45;
-
-dipper.add(stick);
-
-const bucket=
-    new THREE.Group();
-
-bucket.position.set(
-    0,-1.25,5.15
-);
-
-dipper.add(bucket);
-
-bucket.add(
-    box(
-        3,1.7,2,
-        steel,
-        0,0,0
-    )
-);
-
-for(let i=0;i<5;i++){
-
-    const tooth=
-        box(
-            .32,.45,1,
-            steel,
-            -1.2+i*.6,
-            -.95,1
-        );
-
-    tooth.rotation.x=.25;
-
-    bucket.add(tooth);
-}
-
-/* =========================================================
-   human
-========================================================= */
-
-const player=
-    new THREE.Group();
-
-player.position.set(
-    25,0,18
-);
-
-scene.add(player);
-
-function createHuman(){
-
-    const g=
-        new THREE.Group();
-
-    const skin=
-        mat(0xd89a68,.8);
-
-    const shirt=
-        mat(0x2563eb,.75);
-
-    const pants=
-        mat(0x172554,.8);
-
-    g.add(
-        new THREE.Mesh(
-            new THREE.SphereGeometry(
-                .48,16,12
-            ),
-            skin
-        )
-    );
-
-    g.children[0].position.y=2.8;
-
-    g.add(
-        box(
-            .8,1.25,.5,
-            shirt,
-            0,1.75,0
-        )
-    );
-
-    g.add(
-        box(
-            .25,1.05,.3,
-            pants,
-            -.22,.6,0
-        )
-    );
-
-    g.add(
-        box(
-            .25,1.05,.3,
-            pants,
-            .22,.6,0
-        )
-    );
-
-    g.add(
-        box(
-            .22,1.05,.22,
-            shirt,
-            -.58,1.75,0
-        )
-    );
-
-    g.add(
-        box(
-            .22,1.05,.22,
-            shirt,
-            .58,1.75,0
-        )
-    );
-
-    g.children.forEach(
-        x=>{
-            x.castShadow=true;
-        }
-    );
-
-    return g;
-}
-
-const human=
-    createHuman();
-
-player.add(human);
-
-/* =========================================================
-   game state
-========================================================= */
-
-let mode="foot";
-
-let money=0;
-let score=0;
-
-let tractorSpeed=0;
-
-let trailerYaw=
-    tractor.rotation.y;
-
-let loadAmount=0;
-
-let cameraYaw=0;
-let cameraPitch=.38;
-
-let cameraDistance=13;
-
-const targetPosition=
-    new THREE.Vector3(
-        125,0,125
-    );
-
-const input={
-    x:0,
-    y:0,
-    gas:false,
-    brake:false,
-    enter:false,
-    up:false,
-    down:false,
-    dig:false,
-    dump:false
+let state = {
+  lang: 'en',
+  gender: 'male',
+  muted: false,
+  heartActive: false,
+  selectedKey: null
 };
 
 /* =========================================================
-   joystick
+   BUILD LEFT SIDEBAR BUTTONS
 ========================================================= */
-
-const joystick=
-    document.getElementById(
-        "joystick"
-    );
-
-const stick=
-    document.getElementById(
-        "stick"
-    );
-
-let joystickPointer=null;
-
-function setJoystick(
-    clientX,
-    clientY
-){
-
-    const r=
-        joystick.getBoundingClientRect();
-
-    const cx=
-        r.left+r.width/2;
-
-    const cy=
-        r.top+r.height/2;
-
-    let dx=
-        clientX-cx;
-
-    let dy=
-        clientY-cy;
-
-    const max=
-        r.width*.34;
-
-    const len=
-        Math.sqrt(dx*dx+dy*dy);
-
-    if(len>max){
-
-        dx=
-            dx/len*max;
-
-        dy=
-            dy/len*max;
-    }
-
-    input.x=
-        dx/max;
-
-    input.y=
-        dy/max;
-
-    stick.style.transform=
-        "translate("+
-        dx+"px,"+
-        dy+"px)";
-}
-
-function resetJoystick(){
-
-    joystickPointer=null;
-
-    input.x=0;
-    input.y=0;
-
-    stick.style.transform=
-        "translate(0,0)";
-}
-
-joystick.addEventListener(
-    "pointerdown",
-    e=>{
-        e.preventDefault();
-
-        joystickPointer=
-            e.pointerId;
-
-        joystick.setPointerCapture(
-            e.pointerId
-        );
-
-        setJoystick(
-            e.clientX,
-            e.clientY
-        );
-    }
-);
-
-joystick.addEventListener(
-    "pointermove",
-    e=>{
-        if(
-            joystickPointer===
-            e.pointerId
-        ){
-            setJoystick(
-                e.clientX,
-                e.clientY
-            );
-        }
-    }
-);
-
-joystick.addEventListener(
-    "pointerup",
-    e=>{
-        if(
-            joystickPointer===
-            e.pointerId
-        )
-            resetJoystick();
-    }
-);
-
-joystick.addEventListener(
-    "pointercancel",
-    resetJoystick
-);
-
-/* =========================================================
-   swipe camera
-========================================================= */
-
-const cameraTouch=
-    document.getElementById(
-        "cameraTouch"
-    );
-
-let cameraPointer=null;
-let lastCamX=0;
-let lastCamY=0;
-
-cameraTouch.addEventListener(
-    "pointerdown",
-    e=>{
-
-        cameraPointer=
-            e.pointerId;
-
-        lastCamX=
-            e.clientX;
-
-        lastCamY=
-            e.clientY;
-
-        cameraTouch.setPointerCapture(
-            e.pointerId
-        );
-    }
-);
-
-cameraTouch.addEventListener(
-    "pointermove",
-    e=>{
-
-        if(
-            cameraPointer===
-            e.pointerId
-        ){
-
-            const dx=
-                e.clientX-lastCamX;
-
-            const dy=
-                e.clientY-lastCamY;
-
-            lastCamX=e.clientX;
-            lastCamY=e.clientY;
-
-            cameraYaw -=
-                dx*.006;
-
-            cameraPitch +=
-                dy*.004;
-
-            cameraPitch=
-                THREE.MathUtils.clamp(
-                    cameraPitch,
-                    .12,
-                    .9
-                );
-        }
-    }
-);
-
-cameraTouch.addEventListener(
-    "pointerup",
-    e=>{
-        if(
-            cameraPointer===
-            e.pointerId
-        )
-            cameraPointer=null;
-    }
-);
-
-cameraTouch.addEventListener(
-    "pointercancel",
-    e=>{
-        cameraPointer=null;
-    }
-);
-
-/* =========================================================
-   action buttons
-========================================================= */
-
-function buttonHold(
-    id,
-    key
-){
-
-    const b=
-        document.getElementById(id);
-
-    b.addEventListener(
-        "pointerdown",
-        e=>{
-            e.preventDefault();
-
-            input[key]=true;
-
-            b.classList.add(
-                "active"
-            );
-
-            const r=
-                document.createElement(
-                    "span"
-                );
-
-            r.className="ripple";
-
-            r.style.left=
-                e.offsetX+"px";
-
-            r.style.top=
-                e.offsetY+"px";
-
-            b.appendChild(r);
-
-            setTimeout(
-                ()=>{
-                    if(r.parentNode)
-                        r.remove();
-                },
-                600
-            );
-        }
-    );
-
-    const release=
-        ()=>{
-            input[key]=false;
-            b.classList.remove(
-                "active"
-            );
-        };
-
-    b.addEventListener(
-        "pointerup",
-        release
-    );
-
-    b.addEventListener(
-        "pointercancel",
-        release
-    );
-
-    b.addEventListener(
-        "pointerleave",
-        release
-    );
-}
-
-buttonHold("gas","gas");
-buttonHold("brake","brake");
-buttonHold("boomUp","up");
-buttonHold("boomDown","down");
-buttonHold("dig","dig");
-buttonHold("dump","dump");
-
-document
-    .getElementById("enter")
-    .addEventListener(
-        "pointerdown",
-        e=>{
-            e.preventDefault();
-            enterVehicle();
-        }
-    );
-
-/* =========================================================
-   keyboard
-========================================================= */
-
-window.addEventListener(
-    "keydown",
-    e=>{
-
-        if(e.key==="w"||e.key==="W"||e.key==="ArrowUp")
-            input.gas=true;
-
-        if(e.key==="s"||e.key==="S"||e.key==="ArrowDown")
-            input.brake=true;
-
-        if(e.key==="a"||e.key==="A"||e.key==="ArrowLeft")
-            input.x=-1;
-
-        if(e.key==="d"||e.key==="D"||e.key==="ArrowRight")
-            input.x=1;
-
-        if(e.key==="e"||e.key==="E")
-            enterVehicle();
-
-        if(e.key==="r"||e.key==="R")
-            input.up=true;
-
-        if(e.key==="f"||e.key==="F")
-            input.down=true;
-
-        if(e.key==="g"||e.key==="G")
-            input.dig=true;
-
-        if(e.key==="h"||e.key==="H")
-            input.dump=true;
-    }
-);
-
-window.addEventListener(
-    "keyup",
-    e=>{
-
-        if(e.key==="w"||e.key==="W"||e.key==="ArrowUp")
-            input.gas=false;
-
-        if(e.key==="s"||e.key==="S"||e.key==="ArrowDown")
-            input.brake=false;
-
-        if(
-            e.key==="a"||
-            e.key==="A"||
-            e.key==="ArrowLeft"||
-            e.key==="d"||
-            e.key==="D"||
-            e.key==="ArrowRight"
-        )
-            input.x=0;
-
-        if(e.key==="r"||e.key==="R")
-            input.up=false;
-
-        if(e.key==="f"||e.key==="F")
-            input.down=false;
-
-        if(e.key==="g"||e.key==="G")
-            input.dig=false;
-
-        if(e.key==="h"||e.key==="H")
-            input.dump=false;
-    }
-);
-
-/* =========================================================
-   helpers
-========================================================= */
-
-function distance(
-    a,b
-){
-
-    const dx=a.x-b.x;
-    const dz=a.z-b.z;
-
-    return Math.sqrt(
-        dx*dx+dz*dz
-    );
-}
-
-function forward(
-    yaw
-){
-
-    return new THREE.Vector3(
-        Math.sin(yaw),
-        0,
-        Math.cos(yaw)
-    );
-}
-
-function setStatus(
-    text
-){
-
-    document
-        .getElementById(
-            "status"
-        )
-        .textContent=text;
+const leftPanel = document.getElementById('leftPanel');
+SIDEBAR_ITEMS.forEach(key=>{
+  const d = DATA[key];
+  const btn = document.createElement('div');
+  btn.className = 'organ-btn' + (key==='heart' ? ' heart-btn':'');
+  btn.dataset.key = key;
+  btn.innerHTML = `<span class="icon">${d.icon}</span><span class="label">${d[state.lang].name}</span>`;
+  btn.addEventListener('click', ()=> selectOrgan(key, true));
+  leftPanel.appendChild(btn);
+});
+
+function refreshSidebarLabels(){
+  document.querySelectorAll('.organ-btn').forEach(btn=>{
+    const key = btn.dataset.key;
+    btn.querySelector('.label').textContent = DATA[key][state.lang].name;
+  });
 }
 
 /* =========================================================
-   enter / exit
+   THREE.JS SCENE SETUP
 ========================================================= */
+const holder = document.getElementById('canvas-holder');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1117);
+scene.fog = new THREE.FogExp2(0x0d1117, 0.028);
 
-function enterVehicle(){
+const camera = new THREE.PerspectiveCamera(45, holder.clientWidth/holder.clientHeight, 0.1, 200);
+camera.position.set(0, 3.6, 9);
 
-    if(mode==="foot"){
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(holder.clientWidth, holder.clientHeight);
+renderer.shadowMap.enabled = true;
+holder.appendChild(renderer.domElement);
 
-        const dt=
-            distance(
-                player.position,
-                tractor.position
-            );
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 1.2;
+controls.maxDistance = 20;
+controls.target.set(0, 3.4, 0);
+controls.update();
 
-        const dj=
-            distance(
-                player.position,
-                jcb.position
-            );
+/* ---------- lighting: futuristic lab ---------- */
+scene.add(new THREE.AmbientLight(0x334455, 0.9));
 
-        if(dt<9){
+const keyLight = new THREE.DirectionalLight(0x9fd8ff, 1.1);
+keyLight.position.set(5, 8, 6);
+keyLight.castShadow = true;
+scene.add(keyLight);
 
-            mode="tractor";
+const rimGreen = new THREE.PointLight(0x39ff88, 6, 20);
+rimGreen.position.set(-4, 5, -3);
+scene.add(rimGreen);
 
-            human.visible=false;
+const rimBlue = new THREE.PointLight(0x3fd0ff, 5, 20);
+rimBlue.position.set(4, 2, 4);
+scene.add(rimBlue);
 
-            cameraYaw=
-                tractor.rotation.y;
+/* ---------- lab floor grid ---------- */
+const grid = new THREE.GridHelper(40, 40, 0x1f6a4a, 0x142433);
+grid.position.y = 0;
+grid.material.transparent = true;
+grid.material.opacity = 0.35;
+scene.add(grid);
 
-            setStatus(
-                "🚜 tractor mode"
-            );
+/* =========================================================
+   MATERIALS
+========================================================= */
+const boneMat = ()=> new THREE.MeshStandardMaterial({ color:0xe9e3d3, roughness:0.55, metalness:0.05 });
+const boneMatF = ()=> new THREE.MeshStandardMaterial({ color:0xf1e6de, roughness:0.5, metalness:0.05 });
+const muscleMat = ()=> new THREE.MeshStandardMaterial({ color:0xb4362f, roughness:0.6, metalness:0.05, transparent:true, opacity:0.55 });
+const organMat = (c)=> new THREE.MeshStandardMaterial({ color:c, roughness:0.35, metalness:0.15, emissive:new THREE.Color(c).multiplyScalar(0.15) });
+const nerveMat = ()=> new THREE.LineBasicMaterial({ color:0xffe14d, transparent:true, opacity:0.85 });
+const skinMat = (c)=> new THREE.MeshStandardMaterial({ color:c, roughness:0.75, metalness:0.02, transparent:true, opacity:0.14 });
 
-        }else if(dj<10){
+const NEON = new THREE.Color(0x39ff88);
 
-            mode="jcb";
+/* =========================================================
+   BUILD HUMAN FIGURE
+========================================================= */
+const human = new THREE.Group();
+scene.add(human);
 
-            human.visible=false;
+const bones = new THREE.Group(); bones.name='bones';
+const muscles = new THREE.Group(); muscles.name='muscles';
+const nerves = new THREE.Group(); nerves.name='nerves';
+const organs = new THREE.Group(); organs.name='organs';
+const skin = new THREE.Group(); skin.name='skin';
+human.add(bones, muscles, nerves, organs, skin);
 
-            cameraYaw=
-                jcb.rotation.y;
+// interactive registry: mesh.uuid -> {key, originalEmissive}
+const interactive = new Map();
 
-            setStatus(
-                "🏗️ JCB mode"
-            );
+function registerInteractive(mesh, key){
+  mesh.userData.infoKey = key;
+  interactive.set(mesh.uuid, mesh);
+}
 
-        }else{
+function makeBoneMaterial(){ return state.gender==='female' ? boneMatF() : boneMat(); }
 
-            setStatus(
-                "vehicle के पास जाएँ"
-            );
-        }
+/* ---- Legs ---- */
+function buildLeg(x){
+  const g = new THREE.Group();
+  const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.13,1.5,16), makeBoneMaterial());
+  thigh.position.set(x, 1.65, 0);
+  const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.08,1.4,16), makeBoneMaterial());
+  shin.position.set(x, 0.35, 0);
+  const foot = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.12,0.42), makeBoneMaterial());
+  foot.position.set(x, -0.4, 0.12);
+  [thigh,shin,foot].forEach(m=>{ m.castShadow=true; registerInteractive(m,'leg'); g.add(m); });
+  return g;
+}
+bones.add(buildLeg(-0.32), buildLeg(0.32));
 
-    }else{
+/* ---- Pelvis ---- */
+const pelvis = new THREE.Mesh(new THREE.CapsuleGeometry(0.42,0.25,4,10), makeBoneMaterial());
+pelvis.position.set(0,2.35,0); pelvis.rotation.z = Math.PI/2; pelvis.scale.set(1,0.65,0.8);
+registerInteractive(pelvis,'skeleton'); bones.add(pelvis);
 
-        if(mode==="tractor"){
+/* ---- Spine ---- */
+const spine = new THREE.Group();
+for(let i=0;i<9;i++){
+  const seg = new THREE.Mesh(new THREE.SphereGeometry(0.1,10,10), makeBoneMaterial());
+  seg.position.set(0, 2.65 + i*0.19, -0.02);
+  registerInteractive(seg,'spine');
+  spine.add(seg);
+}
+bones.add(spine);
 
-            const f=
-                forward(
-                    tractor.rotation.y
-                );
+/* ---- Ribcage ---- */
+const ribcage = new THREE.Group();
+for(let i=0;i<7;i++){
+  const rib = new THREE.Mesh(new THREE.TorusGeometry(0.55 - i*0.012, 0.028, 8, 24, Math.PI*1.35), makeBoneMaterial());
+  rib.position.set(0, 3.05 + i*0.16, -0.05);
+  rib.rotation.set(Math.PI/2, 0, Math.PI*0.82);
+  rib.castShadow = true;
+  registerInteractive(rib,'skeleton');
+  ribcage.add(rib);
+}
+const sternum = new THREE.Mesh(new THREE.BoxGeometry(0.1,1.1,0.08), makeBoneMaterial());
+sternum.position.set(0, 3.6, 0.5);
+registerInteractive(sternum,'skeleton');
+ribcage.add(sternum);
+bones.add(ribcage);
 
-            player.position.copy(
-                tractor.position
-            );
+/* ---- Shoulders + Arms ---- */
+function buildArm(x, sign){
+  const g = new THREE.Group();
+  const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.16,12,12), makeBoneMaterial());
+  shoulder.position.set(x, 4.05, 0);
+  const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.08,1.1,14), makeBoneMaterial());
+  upperArm.position.set(x + sign*0.05, 3.5, 0.05);
+  upperArm.rotation.z = sign * 0.18;
+  const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.075,0.06,1.0,14), makeBoneMaterial());
+  forearm.position.set(x + sign*0.12, 2.5, 0.1);
+  forearm.rotation.z = sign * 0.12;
+  const hand = new THREE.Mesh(new THREE.SphereGeometry(0.11,10,10), makeBoneMaterial());
+  hand.position.set(x + sign*0.16, 1.95, 0.12);
+  [shoulder, upperArm, forearm, hand].forEach(m=>{ m.castShadow=true; registerInteractive(m,'arm'); g.add(m); });
+  return g;
+}
+bones.add(buildArm(-0.62,-1), buildArm(0.62,1));
 
-            player.position.x -=
-                f.x*5;
+/* ---- Skull ---- */
+const skullGroup = new THREE.Group();
+const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.32,20,20), makeBoneMaterial());
+cranium.position.set(0,4.62,0); cranium.scale.set(1,1.08,1.05);
+const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.12,0.28), makeBoneMaterial());
+jaw.position.set(0,4.28,0.06);
+const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.14,0.28,14), makeBoneMaterial());
+neck.position.set(0,4.16,0);
+[cranium,jaw,neck].forEach(m=>{ m.castShadow=true; registerInteractive(m,'skull'); skullGroup.add(m); });
+bones.add(skullGroup);
 
-            player.position.z -=
-                f.z*5;
+/* ---- Brain (inside skull) ---- */
+const brainMesh = new THREE.Mesh(new THREE.SphereGeometry(0.22,16,16), organMat(0xffb6c1));
+brainMesh.position.set(0,4.66,0.01); brainMesh.scale.set(1,0.9,0.95);
+registerInteractive(brainMesh,'brain');
+organs.add(brainMesh);
 
-        }else{
+/* ---- Lungs ---- */
+function buildLung(x){
+  const lung = new THREE.Mesh(new THREE.SphereGeometry(0.28,14,14), organMat(0xd98a8a));
+  lung.position.set(x,3.65,0.02); lung.scale.set(0.75,1.15,0.85);
+  registerInteractive(lung,'lungs');
+  return lung;
+}
+organs.add(buildLung(-0.32), buildLung(0.32));
 
-            player.position.copy(
-                jcb.position
-            );
+/* ---- Heart ---- */
+const heartGroup = new THREE.Group();
+heartGroup.position.set(-0.05, 3.55, 0.28);
+const heartMat = organMat(0xff2d4d);
+const heartTop = new THREE.Mesh(new THREE.SphereGeometry(0.17,16,16), heartMat);
+heartTop.position.set(-0.09,0.06,0);
+const heartTop2 = new THREE.Mesh(new THREE.SphereGeometry(0.17,16,16), heartMat);
+heartTop2.position.set(0.09,0.06,0);
+const heartBottom = new THREE.Mesh(new THREE.ConeGeometry(0.2,0.34,16), heartMat);
+heartBottom.position.set(0,-0.14,0);
+heartBottom.rotation.x = Math.PI;
+[heartTop,heartTop2,heartBottom].forEach(m=>{ m.castShadow = true; registerInteractive(m,'heart'); heartGroup.add(m); });
+organs.add(heartGroup);
 
-            player.position.x+=7;
-        }
+/* ---- Muscles overlay (semi-transparent) ---- */
+const torsoMuscle = new THREE.Mesh(new THREE.CapsuleGeometry(0.52,1.3,6,16), muscleMat());
+torsoMuscle.position.set(0,3.55,0); torsoMuscle.scale.set(1,1,0.75);
+registerInteractive(torsoMuscle,'muscles');
+muscles.add(torsoMuscle);
 
-        human.visible=true;
+function buildLimbMuscle(x,y,len,r){
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r,len,4,10), muscleMat());
+  m.position.set(x,y,0.02);
+  registerInteractive(m,'muscles');
+  return m;
+}
+muscles.add(buildLimbMuscle(-0.32,1.7,1.2,0.19));
+muscles.add(buildLimbMuscle(0.32,1.7,1.2,0.19));
+muscles.add(buildLimbMuscle(-0.66,3.5,0.9,0.14));
+muscles.add(buildLimbMuscle(0.66,3.5,0.9,0.14));
+muscles.visible = false;
 
-        mode="foot";
+/* ---- Nerves overlay (lines) ---- */
+function buildNerveLine(points){
+  const geo = new THREE.BufferGeometry().setFromPoints(points.map(p=>new THREE.Vector3(...p)));
+  const line = new THREE.Line(geo, nerveMat());
+  return line;
+}
+nerves.add(buildNerveLine([[0,4.5,0],[0,3.6,0],[0,2.6,0],[0,2.35,0]])); // spinal cord
+nerves.add(buildNerveLine([[0,2.35,0],[-0.32,1.6,0],[-0.32,0.3,0],[-0.32,-0.3,0.1]]));
+nerves.add(buildNerveLine([[0,2.35,0],[0.32,1.6,0],[0.32,0.3,0],[0.32,-0.3,0.1]]));
+nerves.add(buildNerveLine([[0,3.9,0],[-0.62,3.5,0],[-0.78,2.5,0.1],[-0.78,1.95,0.12]]));
+nerves.add(buildNerveLine([[0,3.9,0],[0.62,3.5,0],[0.78,2.5,0.1],[0.78,1.95,0.12]]));
+nerves.visible = false;
 
-        tractorSpeed=0;
+/* ---- Skin silhouette (very subtle, toggled off for skeleton focus) ---- */
+const torsoSkin = new THREE.Mesh(new THREE.CapsuleGeometry(0.58,1.35,6,16), skinMat(0xd8b48a));
+torsoSkin.position.set(0,3.55,0); torsoSkin.scale.set(1,1,0.8);
+skin.add(torsoSkin);
+const headSkin = new THREE.Mesh(new THREE.SphereGeometry(0.36,16,16), skinMat(0xd8b48a));
+headSkin.position.set(0,4.62,0); headSkin.scale.set(1,1.1,1.05);
+skin.add(headSkin);
 
-        setStatus(
-            "on foot"
-        );
+function applyGenderVisuals(){
+  const tone = state.gender==='female' ? 0xe7c3a4 : 0xd8b48a;
+  torsoSkin.material.color.set(tone);
+  headSkin.material.color.set(tone);
+  torsoSkin.scale.x = state.gender==='female' ? 0.92 : 1;
+  human.scale.setScalar(state.gender==='female' ? 0.96 : 1);
+  bones.children.forEach(c=>{});
+}
+applyGenderVisuals();
+
+/* =========================================================
+   HIGHLIGHT LOGIC
+========================================================= */
+let highlighted = [];
+function clearHighlight(){
+  highlighted.forEach(m=>{
+    if(m.userData.origEmissive !== undefined){
+      m.material.emissive.copy(m.userData.origEmissive);
+      m.material.emissiveIntensity = m.userData.origEmissiveIntensity ?? 1;
     }
+  });
+  highlighted = [];
+}
+function highlightMesh(mesh){
+  if(!mesh.material || !mesh.material.emissive) return;
+  if(mesh.userData.origEmissive === undefined){
+    mesh.userData.origEmissive = mesh.material.emissive.clone();
+    mesh.userData.origEmissiveIntensity = mesh.material.emissiveIntensity ?? 1;
+  }
+  mesh.material.emissive.set(NEON);
+  mesh.material.emissiveIntensity = 1.4;
+  highlighted.push(mesh);
+}
+function highlightGroupByKey(key){
+  clearHighlight();
+  interactive.forEach(mesh=>{
+    if(mesh.userData.infoKey === key) highlightMesh(mesh);
+  });
 }
 
 /* =========================================================
-   foot movement
+   CAMERA FOCUS ANIMATION
 ========================================================= */
+let camAnim = null;
+function focusCamera(targetPos, lookAt, duration=1000){
+  camAnim = {
+    startPos: camera.position.clone(),
+    startTarget: controls.target.clone(),
+    endPos: targetPos.clone(),
+    endTarget: lookAt.clone(),
+    startTime: performance.now(),
+    duration
+  };
+  controls.enabled = false;
+}
+function updateCamAnim(now){
+  if(!camAnim) return;
+  const t = Math.min(1, (now - camAnim.startTime)/camAnim.duration);
+  const ease = t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+  camera.position.lerpVectors(camAnim.startPos, camAnim.endPos, ease);
+  controls.target.lerpVectors(camAnim.startTarget, camAnim.endTarget, ease);
+  if(t>=1){ camAnim=null; controls.enabled = true; }
+}
 
-function updateFoot(dt){
+const FOCUS_VIEWS = {
+  skull:   { pos:new THREE.Vector3(1.1,4.9,1.6),  look:new THREE.Vector3(0,4.62,0) },
+  brain:   { pos:new THREE.Vector3(0.7,4.85,1.1),  look:new THREE.Vector3(0,4.62,0) },
+  heart:   { pos:new THREE.Vector3(0.6,3.7,1.5),  look:new THREE.Vector3(-0.05,3.55,0.28) },
+  skeleton:{ pos:new THREE.Vector3(0,3.4,7.5),    look:new THREE.Vector3(0,3.2,0) },
+  muscles: { pos:new THREE.Vector3(1.4,3.6,2.6),  look:new THREE.Vector3(0,3.4,0) },
+  nerves:  { pos:new THREE.Vector3(1.2,3.4,2.8),  look:new THREE.Vector3(0,3.0,0) },
+  lungs:   { pos:new THREE.Vector3(0.8,3.75,1.5), look:new THREE.Vector3(0,3.65,0) },
+  arm:     { pos:new THREE.Vector3(1.6,3.4,1.8),  look:new THREE.Vector3(0.62,3.2,0) },
+  leg:     { pos:new THREE.Vector3(1.2,1.4,2.4),  look:new THREE.Vector3(0.32,1.2,0) },
+  spine:   { pos:new THREE.Vector3(1.2,3.6,2.6),  look:new THREE.Vector3(0,3.2,0) }
+};
 
-    if(mode!=="foot")
-        return;
+/* =========================================================
+   AUDIO — heartbeat synth (Web Audio API)
+========================================================= */
+let audioCtx = null;
+let heartInterval = null;
+function ensureAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+}
+function thump(delay, freq, dur, vol){
+  if(state.muted || !audioCtx) return;
+  const t0 = audioCtx.currentTime + delay;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, t0);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(20,freq*0.6), t0+dur);
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(vol, t0+dur*0.18);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0+dur+0.02);
+}
+function playLubDub(){
+  thump(0, 62, 0.16, 0.55);      // "lub"
+  thump(0.16, 48, 0.14, 0.4);    // "dub"
+}
+const BEAT_MS = 750; // 80 BPM
+function startHeartbeat(){
+  if(heartInterval) return;
+  ensureAudio();
+  playLubDub();
+  heartInterval = setInterval(playLubDub, BEAT_MS);
+  document.getElementById('bpmBadge').classList.add('show');
+}
+function stopHeartbeat(){
+  clearInterval(heartInterval);
+  heartInterval = null;
+  document.getElementById('bpmBadge').classList.remove('show');
+}
 
-    const magnitude=
-        Math.min(
-            1,
-            Math.sqrt(
-                input.x*input.x+
-                input.y*input.y
-            )
-        );
-
-    if(magnitude<.03)
-        return;
-
-    const speed=7;
-
-    /* joystick y: up is negative */
-    const moveAngle=
-        cameraYaw+
-        Math.atan2(
-            input.x,
-            -input.y
-        );
-
-    player.rotation.y=
-        moveAngle;
-
-    const f=
-        forward(
-            moveAngle
-        );
-
-    player.position.x +=
-        f.x*
-        speed*
-        magnitude*
-        dt;
-
-    player.position.z +=
-        f.z*
-        speed*
-        magnitude*
-        dt;
-
-    player.position.x=
-        THREE.MathUtils.clamp(
-            player.position.x,
-            -270,270
-        );
-
-    player.position.z=
-        THREE.MathUtils.clamp(
-            player.position.z,
-            -270,270
-        );
-
-    human.position.y=
-        Math.abs(
-            Math.sin(
-                performance.now()*.014
-            )
-        )*.05;
+/* heart visual pulse driven by clock, synced-ish to BEAT_MS */
+let heartClockStart = performance.now();
+function updateHeartPulse(now){
+  if(!state.heartActive){ heartGroup.scale.setScalar(1); return; }
+  const cyclePos = ((now - heartClockStart) % BEAT_MS) / BEAT_MS;
+  // double-pump envelope: quick expand at 0 and at 0.22 (lub, dub)
+  let s = 1;
+  const pump = (center, width, amt)=>{
+    const d = Math.abs(cyclePos-center);
+    if(d < width){ s += amt * (1 - d/width); }
+  };
+  pump(0.02, 0.09, 0.22);
+  pump(0.22, 0.07, 0.14);
+  heartGroup.scale.setScalar(s);
 }
 
 /* =========================================================
-   tractor physics
+   INFO CARD
 ========================================================= */
+const infoCard = document.getElementById('infoCard');
+const infoName = document.getElementById('infoName');
+const infoPronounce = document.getElementById('infoPronounce');
+const infoDesc = document.getElementById('infoDesc');
+const listenBtn = document.getElementById('listenBtn');
 
-function updateTractor(dt){
+function showInfo(key){
+  const d = DATA[key];
+  if(!d) return;
+  const L = d[state.lang];
+  infoName.innerHTML = `${d.icon} ${L.name}`;
+  infoPronounce.textContent = L.pronounce;
+  infoDesc.textContent = L.desc;
+  infoCard.classList.add('show');
+  state.selectedKey = key;
+}
+document.getElementById('closeInfo').addEventListener('click', ()=>{
+  infoCard.classList.remove('show');
+});
+listenBtn.addEventListener('click', ()=>{
+  if(!state.selectedKey) return;
+  const d = DATA[state.selectedKey];
+  const L = d[state.lang];
+  const utter = new SpeechSynthesisUtterance(L.name);
+  utter.lang = state.lang === 'hi' ? 'hi-IN' : 'en-US';
+  utter.rate = 0.85;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utter);
+});
 
-    if(mode!=="tractor")
-        return;
+/* =========================================================
+   SELECT ORGAN (from sidebar or raycast)
+========================================================= */
+function selectOrgan(key, fromSidebar){
+  document.querySelectorAll('.organ-btn').forEach(b=> b.classList.toggle('selected', b.dataset.key===key));
 
-    const throttle=
-        input.gas?1:0;
+  highlightGroupByKey(key);
+  showInfo(key);
 
-    const brake=
-        input.brake?1:0;
+  const view = FOCUS_VIEWS[key] || FOCUS_VIEWS.skeleton;
+  focusCamera(view.pos, view.look, 1100);
 
-    if(throttle){
+  if(key === 'skeleton'){
+    muscles.visible = false; nerves.visible = false;
+  }
+  if(key === 'muscles'){ muscles.visible = true; }
+  if(key === 'nerves'){ nerves.visible = true; }
 
-        tractorSpeed +=
-            18*dt;
-
-        tractorSpeed=
-            Math.min(
-                tractorSpeed,
-                23
-            );
-
-    }else if(brake){
-
-        tractorSpeed -=
-            15*dt;
-
-        tractorSpeed=
-            Math.max(
-                tractorSpeed,
-                -9
-            );
-
-    }else{
-
-        tractorSpeed *=
-            Math.pow(.05,dt);
-
-        if(
-            Math.abs(
-                tractorSpeed
-            )<.03
-        )
-            tractorSpeed=0;
-    }
-
-    const steer=
-        THREE.MathUtils.clamp(
-            input.x,
-            -1,
-            1
-        );
-
-    if(
-        Math.abs(tractorSpeed)>.15
-    ){
-
-        const speedFactor=
-            Math.min(
-                1,
-                Math.abs(
-                    tractorSpeed
-                )/8
-            );
-
-        tractor.rotation.y +=
-            steer*
-            .9*
-            speedFactor*
-            dt*
-            (
-                tractorSpeed>=0
-                ?1
-                :-1
-            );
-
-        frontLeft.rotation.y=
-            -steer*.45;
-
-        frontRight.rotation.y=
-            -steer*.45;
-    }
-
-    const f=
-        forward(
-            tractor.rotation.y
-        );
-
-    tractor.position.x +=
-        f.x*
-        tractorSpeed*
-        dt;
-
-    tractor.position.z +=
-        f.z*
-        tractorSpeed*
-        dt;
-
-    tractor.position.x=
-        THREE.MathUtils.clamp(
-            tractor.position.x,
-            -270,270
-        );
-
-    tractor.position.z=
-        THREE.MathUtils.clamp(
-            tractor.position.z,
-            -270,270
-        );
-
-    /* =====================================================
-       REAL ARTICULATED HITCH PHYSICS
-
-       trailer yaw does not simply equal tractor yaw.
-       It follows the tractor through an angular coupling.
-    ===================================================== */
-
-    const hitch=
-        new THREE.Vector3();
-
-    tractor.localToWorld(
-        hitch.set(
-            0,
-            1.35,
-            -4.8
-        )
-    );
-
-    const trailerLength=5.4;
-
-    let angleDifference=
-        tractor.rotation.y-
-        trailerYaw;
-
-    while(angleDifference>Math.PI)
-        angleDifference-=Math.PI*2;
-
-    while(angleDifference<-Math.PI)
-        angleDifference+=Math.PI*2;
-
-    const lateralForce=
-        Math.sin(
-            angleDifference
-        );
-
-    const angularSpeed=
-        (
-            tractorSpeed/
-            trailerLength
-        )*
-        lateralForce;
-
-    trailerYaw +=
-        angularSpeed*
-        dt;
-
-    const trailerF=
-        forward(
-            trailerYaw
-        );
-
-    trolley.position.set(
-        hitch.x-
-        trailerF.x*4.9,
-        0,
-        hitch.z-
-        trailerF.z*4.9
-    );
-
-    trolley.rotation.y=
-        trailerYaw;
-
-    /* smoke */
-
-    if(
-        Math.abs(tractorSpeed)>1 &&
-        Math.random()<dt*8
-    ){
-        createSmoke();
-    }
+  if(key === 'heart'){
+    state.heartActive = true;
+    heartClockStart = performance.now();
+    startHeartbeat();
+  } else if(fromSidebar){
+    state.heartActive = false;
+    stopHeartbeat();
+  }
 }
 
 /* =========================================================
-   JCB controls
+   RAYCASTING — click/tap any body part
 ========================================================= */
-
-let boomAngle=-.55;
-let bucketAngle=.25;
-let digTime=0;
-
-function updateJcb(dt){
-
-    if(mode!=="jcb")
-        return;
-
-    if(input.up){
-
-        boomAngle+=
-            .65*dt;
-
-        boomAngle=
-            Math.min(
-                .25,
-                boomAngle
-            );
-    }
-
-    if(input.down){
-
-        boomAngle-=
-            .65*dt;
-
-        boomAngle=
-            Math.max(
-                -1.1,
-                boomAngle
-            );
-    }
-
-    boomPivot.rotation.x=
-        boomAngle;
-
-    if(input.dig){
-
-        bucketAngle+=
-            1.2*dt;
-
-        bucketAngle=
-            Math.min(
-                1.1,
-                bucketAngle
-            );
-
-        digTime+=dt;
-
-        if(
-            Math.random()<dt*28
-        ){
-            createDust();
-        }
-
-        if(
-            digTime>.9
-        ){
-
-            digTime=0;
-
-            if(loadAmount<1){
-
-                loadAmount=
-                    Math.min(
-                        1,
-                        loadAmount+.25
-                    );
-
-                money+=500;
-                score+=500;
-
-                dirtLoad.visible=true;
-
-                setStatus(
-                    "⛏️ sand loaded +₹500"
-                );
-
-            }else{
-
-                setStatus(
-                    "trolley is full"
-                );
-            }
-        }
-
-    }else{
-
-        digTime=0;
-    }
-
-    if(input.dump){
-
-        bucketAngle-=
-            1.3*dt;
-
-        bucketAngle=
-            Math.max(
-                -.9,
-                bucketAngle
-            );
-    }
-
-    bucket.rotation.x=
-        bucketAngle;
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+function onPointerSelect(clientX, clientY){
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((clientX-rect.left)/rect.width)*2 - 1;
+  pointer.y = -((clientY-rect.top)/rect.height)*2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const targets = Array.from(interactive.values()).filter(m=>m.visible !== false && m.parent && m.parent.visible !== false);
+  const hits = raycaster.intersectObjects(targets, false);
+  if(hits.length){
+    const mesh = hits[0].object;
+    const key = mesh.userData.infoKey;
+    if(key) selectOrgan(key, true);
+  }
 }
+renderer.domElement.addEventListener('pointerdown', (e)=>{
+  renderer.domElement.dataset.downX = e.clientX;
+  renderer.domElement.dataset.downY = e.clientY;
+});
+renderer.domElement.addEventListener('pointerup', (e)=>{
+  const dx = Math.abs(e.clientX - renderer.domElement.dataset.downX);
+  const dy = Math.abs(e.clientY - renderer.domElement.dataset.downY);
+  if(dx<6 && dy<6){ onPointerSelect(e.clientX, e.clientY); }
+});
 
 /* =========================================================
-   dust and smoke
+   HEADER CONTROLS
 ========================================================= */
+const genderBtn = document.getElementById('genderBtn');
+const genderLabel = document.getElementById('genderLabel');
+genderBtn.addEventListener('click', ()=>{
+  state.gender = state.gender==='male' ? 'female' : 'male';
+  genderBtn.firstChild.textContent = state.gender==='male' ? '♂ ' : '♀ ';
+  genderLabel.textContent = state.gender==='male' ? 'MALE' : 'FEMALE';
+  bones.children.forEach(group=>{
+    group.traverse(o=>{ if(o.isMesh) o.material = makeBoneMaterial(); });
+  });
+  applyGenderVisuals();
+});
 
-const smoke=[];
-const dust=[];
+const langBtn = document.getElementById('langBtn');
+const langLabel = document.getElementById('langLabel');
+const headerSub = document.getElementById('headerSub');
+langBtn.addEventListener('click', ()=>{
+  state.lang = state.lang==='en' ? 'hi' : 'en';
+  langLabel.textContent = state.lang==='en' ? 'EN' : 'हिं';
+  headerSub.textContent = state.lang==='en' ? 'HUMAN ANATOMY EXPLORER' : 'मानव शरीर रचना अन्वेषक';
+  refreshSidebarLabels();
+  if(state.selectedKey) showInfo(state.selectedKey);
+});
 
-function createSmoke(){
+const muteBtn = document.getElementById('muteBtn');
+const muteLabel = document.getElementById('muteLabel');
+muteBtn.addEventListener('click', ()=>{
+  state.muted = !state.muted;
+  muteBtn.classList.toggle('muted', state.muted);
+  muteBtn.firstChild.textContent = state.muted ? '🔇 ' : '🔊 ';
+  muteLabel.textContent = state.muted ? 'MUTED' : 'SOUND';
+  if(state.muted) stopHeartbeat();
+  else if(state.heartActive) startHeartbeat();
+});
 
-    const p=
-        new THREE.Mesh(
-            new THREE.SphereGeometry(
-                .18+
-                Math.random()*.2,
-                8,8
-            ),
-            new THREE.MeshBasicMaterial({
-                color:0x9ca3af,
-                transparent:true,
-                opacity:.4
-            })
-        );
-
-    const pos=
-        new THREE.Vector3();
-
-    exhaust.getWorldPosition(pos);
-
-    p.position.copy(pos);
-
-    scene.add(p);
-
-    smoke.push({
-        mesh:p,
-        life:1
-    });
-}
-
-function createDust(){
-
-    const p=
-        new THREE.Mesh(
-            new THREE.DodecahedronGeometry(
-                .1+
-                Math.random()*.22,
-                0
-            ),
-            mat(0x85572f,1)
-        );
-
-    const pos=
-        new THREE.Vector3();
-
-    bucket.getWorldPosition(pos);
-
-    p.position.copy(pos);
-
-    p.position.x+=
-        (Math.random()-.5)*1.8;
-
-    p.position.z+=
-        (Math.random()-.5)*1.8;
-
-    scene.add(p);
-
-    dust.push({
-        mesh:p,
-        life:1,
-        vx:(Math.random()-.5)*2.5,
-        vy:2+Math.random()*3,
-        vz:(Math.random()-.5)*2.5
-    });
-}
-
-function updateParticles(dt){
-
-    for(
-        let i=smoke.length-1;
-        i>=0;
-        i--
-    ){
-
-        const p=smoke[i];
-
-        p.life-=dt*.65;
-
-        p.mesh.position.y+=
-            dt*2.1;
-
-        p.mesh.position.x+=
-            (Math.random()-.5)*dt;
-
-        p.mesh.position.z+=
-            (Math.random()-.5)*dt;
-
-        p.mesh.scale.multiplyScalar(
-            1+dt*.65
-        );
-
-        p.mesh.material.opacity=
-            Math.max(
-                0,
-                p.life*.42
-            );
-
-        if(p.life<=0){
-
-            scene.remove(
-                p.mesh
-            );
-
-            smoke.splice(i,1);
-        }
-    }
-
-    for(
-        let i=dust.length-1;
-        i>=0;
-        i--
-    ){
-
-        const p=dust[i];
-
-        p.life-=dt*1.15;
-
-        p.mesh.position.x+=
-            p.vx*dt;
-
-        p.mesh.position.y+=
-            p.vy*dt;
-
-        p.mesh.position.z+=
-            p.vz*dt;
-
-        p.vy-=
-            4.5*dt;
-
-        p.mesh.material.opacity=
-            Math.max(
-                0,
-                p.life
-            );
-
-        if(p.life<=0){
-
-            scene.remove(
-                p.mesh
-            );
-
-            dust.splice(i,1);
-        }
-    }
-}
+/* first user gesture unlocks audio context (browser policy) */
+window.addEventListener('pointerdown', ensureAudio, { once:true });
 
 /* =========================================================
-   loading visual
+   RESIZE
 ========================================================= */
-
-function updateLoad(){
-
-    dirtLoad.visible=
-        loadAmount>0;
-
-    const count=
-        Math.ceil(
-            dirtLoad.children.length*
-            loadAmount
-        );
-
-    dirtLoad.children.forEach(
-        (child,i)=>{
-            child.visible=
-                i<count;
-        }
-    );
-}
+window.addEventListener('resize', ()=>{
+  camera.aspect = holder.clientWidth/holder.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(holder.clientWidth, holder.clientHeight);
+});
 
 /* =========================================================
-   delivery
+   HINT FADE
 ========================================================= */
-
-function updateMission(){
-
-    if(
-        mode==="tractor" &&
-        loadAmount>0 &&
-        distance(
-            trolley.position,
-            targetPosition
-        )<14 &&
-        input.dump
-    ){
-
-        loadAmount=0;
-
-        money+=1000;
-        score+=1000;
-
-        dirtLoad.visible=false;
-
-        setStatus(
-            "🏁 delivery complete +₹1000"
-        );
-
-        input.dump=false;
-    }
-
-    const mission=
-        document.getElementById(
-            "mission"
-        );
-
-    if(loadAmount>=1){
-
-        mission.textContent=
-            "🎯 trolley full • go to yellow target";
-
-    }else{
-
-        mission.textContent=
-            "🎯 collect sand from the JCB";
-    }
-}
+setTimeout(()=>{ document.getElementById('hint').style.opacity='0'; }, 6000);
 
 /* =========================================================
-   camera
+   LOADER OUT
 ========================================================= */
-
-const camPos=
-    new THREE.Vector3();
-
-const camLook=
-    new THREE.Vector3();
-
-function updateCamera(dt){
-
-    let object;
-
-    if(mode==="foot")
-        object=player;
-
-    if(mode==="tractor")
-        object=tractor;
-
-    if(mode==="jcb")
-        object=jcb;
-
-    /* camera controlled by swipe */
-
-    const horizontal=
-        cameraYaw;
-
-    const cp=
-        Math.cos(cameraPitch);
-
-    const sp=
-        Math.sin(cameraPitch);
-
-    camPos.set(
-        object.position.x+
-        Math.sin(horizontal)*
-        cameraDistance*
-        cp,
-
-        object.position.y+
-        3+
-        sp*
-        cameraDistance,
-
-        object.position.z+
-        Math.cos(horizontal)*
-        cameraDistance*
-        cp
-    );
-
-    const smoothing=
-        1-
-        Math.pow(
-            .00005,
-            dt
-        );
-
-    camera.position.lerp(
-        camPos,
-        smoothing
-    );
-
-    camLook.set(
-        object.position.x,
-        object.position.y+
-        (mode==="foot"?1.5:2.3),
-        object.position.z
-    );
-
-    camera.lookAt(
-        camLook
-    );
-}
+setTimeout(()=>{
+  const loader = document.getElementById('loader');
+  loader.style.opacity = '0';
+  setTimeout(()=> loader.remove(), 650);
+}, 700);
 
 /* =========================================================
-   GPS
+   RENDER LOOP
 ========================================================= */
-
-function updateGPS(){
-
-    let object;
-
-    if(mode==="foot")
-        object=player;
-
-    if(mode==="tractor")
-        object=tractor;
-
-    if(mode==="jcb")
-        object=jcb;
-
-    const dx=
-        targetPosition.x-
-        object.position.x;
-
-    const dz=
-        targetPosition.z-
-        object.position.z;
-
-    const targetAngle=
-        Math.atan2(
-            dx,
-            dz
-        );
-
-    const relative=
-        targetAngle-
-        cameraYaw;
-
-    document
-        .getElementById(
-            "gpsArrow"
-        )
-        .style.transform=
-        "translate(-50%,-80%) rotate("+
-        relative+
-        "rad)";
-}
-
-/* =========================================================
-   UI
-========================================================= */
-
-function updateUI(){
-
-    document
-        .getElementById(
-            "moneyValue"
-        )
-        .textContent=
-        money.toLocaleString(
-            "en-IN"
-        );
-
-    document
-        .getElementById(
-            "scoreValue"
-        )
-        .textContent=
-        score.toLocaleString(
-            "en-IN"
-        );
-
-    document
-        .getElementById(
-            "speed"
-        )
-        .textContent=
-        Math.round(
-            Math.abs(
-                tractorSpeed
-            )*3.6
-        )+
-        " km/h";
-
-    document
-        .getElementById(
-            "mode"
-        )
-        .textContent=
-        mode==="foot"
-        ?"MODE: ON FOOT"
-        :mode==="tractor"
-            ?"MODE: 🚜 TRACTOR"
-            :"MODE: 🏗️ JCB";
-
-    document
-        .getElementById(
-            "jcbControls"
-        )
-        .style.display=
-        mode==="jcb"
-        ?"flex"
-        :"none";
-
-    document
-        .getElementById(
-            "enter"
-        )
-        .innerHTML=
-        mode==="foot"
-        ?"🚪<br>ENTER"
-        :"🚪<br>EXIT";
-}
-
-/* =========================================================
-   proximity
-========================================================= */
-
-function proximity(){
-
-    if(mode!=="foot")
-        return;
-
-    const dt=
-        distance(
-            player.position,
-            tractor.position
-        );
-
-    const dj=
-        distance(
-            player.position,
-            jcb.position
-        );
-
-    if(dt<9){
-
-        setStatus(
-            "🚜 tractor के पास • ENTER दबाएँ"
-        );
-
-    }else if(dj<10){
-
-        setStatus(
-            "🏗️ JCB के पास • ENTER दबाएँ"
-        );
-    }
-}
-
-/* =========================================================
-   resize
-========================================================= */
-
-window.addEventListener(
-    "resize",
-    ()=>{
-
-        camera.aspect=
-            innerWidth/innerHeight;
-
-        camera.updateProjectionMatrix();
-
-        renderer.setSize(
-            innerWidth,
-            innerHeight
-        );
-
-        renderer.setPixelRatio(
-            Math.min(
-                devicePixelRatio,
-                1.7
-            )
-        );
-    }
-);
-
-/* =========================================================
-   initial trailer placement
-========================================================= */
-
-const initialF=
-    forward(
-        tractor.rotation.y
-    );
-
-trolley.position.set(
-    tractor.position.x-
-    initialF.x*7.8,
-    0,
-    tractor.position.z-
-    initialF.z*7.8
-);
-
-trailerYaw=
-    tractor.rotation.y;
-
-updateLoad();
-
-cameraYaw=
-    tractor.rotation.y+
-    Math.PI;
-
-cameraPitch=.38;
-
-cameraDistance=13;
-
-camera.position.set(
-    tractor.position.x-
-    initialF.x*13,
-    7,
-    tractor.position.z-
-    initialF.z*13
-);
-
-camera.lookAt(
-    tractor.position
-);
-
-/* =========================================================
-   main loop
-========================================================= */
-
-const clock=
-    new THREE.Clock();
-
+const clock = new THREE.Clock();
 function animate(){
-
-    requestAnimationFrame(
-        animate
-    );
-
-    const dt=
-        Math.min(
-            clock.getDelta(),
-            .05
-        );
-
-    updateFoot(dt);
-    updateTractor(dt);
-    updateJcb(dt);
-    updateParticles(dt);
-    updateLoad();
-    updateMission();
-    updateGPS();
-    updateCamera(dt);
-    updateUI();
-    proximity();
-
-    /* target animation */
-
-    target.rotation.y+=
-        dt*.25;
-
-    renderer.render(
-        scene,
-        camera
-    );
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  updateCamAnim(now);
+  updateHeartPulse(now);
+  rimGreen.intensity = 5 + Math.sin(now*0.002)*1.5;
+  rimBlue.intensity = 4 + Math.cos(now*0.0017)*1.2;
+  controls.update();
+  renderer.render(scene, camera);
 }
-
-/* =========================================================
-   start
-========================================================= */
-
-setTimeout(
-    ()=>{
-        document
-            .getElementById(
-                "loading"
-            )
-            .style.display="none";
-
-        animate();
-    },
-    700
-);
+animate();
 </script>
-
 </body>
 </html>
