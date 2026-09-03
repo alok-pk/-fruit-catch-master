@@ -1,864 +1,990 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>BioLab 3D — Human Anatomy Explorer</title>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Fruit Catcher</title>
 <style>
   :root{
-    --bg:#0d1117;
-    --panel:#111823;
-    --panel-edge:#1c2733;
-    --neon:#39ff88;
-    --neon-dim:#1f8a52;
-    --blue:#3fd0ff;
-    --blue-dim:#0f5b74;
-    --text:#dbe6ef;
-    --text-dim:#7f93a6;
-    --danger:#ff4d6d;
+    --sky-top:#2f7cd1;
+    --sky-mid:#6db6e8;
+    --sky-horizon:#ffe7b0;
+    --sun:#fff3c4;
+    --leaf:#2f9e58;
+    --leaf-dark:#1f7a41;
+    --wood:#6b4327;
+    --wood-dark:#4a2d1a;
+    --wood-light:#8a5a35;
+    --coin:#ffcf4d;
+    --coin-dark:#c98f1a;
+    --panel:#22301f;
+    --panel-edge:#3a4d33;
+    --cream:#fdf6e3;
+    --cream-dim:#cfd8bd;
+    --red:#ff5d5d;
+    --font:'Segoe UI', system-ui, -apple-system, sans-serif;
+    --font-round:'Trebuchet MS', 'Segoe UI', sans-serif;
   }
-  *{box-sizing:border-box;}
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{
-    margin:0; padding:0; width:100%; height:100%;
-    background:var(--bg);
-    font-family:'Segoe UI', Arial, sans-serif;
-    color:var(--text);
-    overflow:hidden;
+    margin:0;padding:0;width:100%;height:100%;overflow:hidden;
+    font-family:var(--font-round);
+    background:#000;
+    touch-action:none;
+    user-select:none;
+    -webkit-user-select:none;
   }
-  #app{ position:fixed; inset:0; }
-  #canvas-holder{ position:absolute; inset:0; }
-  canvas{ display:block; touch-action:none; }
 
-  /* ---------- glow scanline background ---------- */
-  #app::before{
-    content:"";
-    position:absolute; inset:0; pointer-events:none; z-index:1;
-    background:
-      radial-gradient(circle at 20% 15%, rgba(63,208,255,0.07), transparent 40%),
-      radial-gradient(circle at 85% 80%, rgba(57,255,136,0.07), transparent 45%);
+  #app{
+    position:fixed;inset:0;
+    display:flex;flex-direction:column;
+    background:linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--sky-horizon) 100%);
   }
 
   /* ---------- HEADER ---------- */
-  #header{
-    position:absolute; top:0; left:0; right:0; z-index:20;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:10px 16px;
-    background:linear-gradient(180deg, rgba(13,17,23,0.95), rgba(13,17,23,0.55));
-    border-bottom:1px solid var(--panel-edge);
-    backdrop-filter:blur(6px);
+  header{
+    position:relative;z-index:20;
+    display:flex;align-items:center;gap:8px;
+    padding:10px 12px;
+    background:linear-gradient(180deg, var(--wood-light), var(--wood) 60%, var(--wood-dark));
+    border-bottom:3px solid var(--wood-dark);
+    box-shadow:0 4px 14px rgba(0,0,0,0.35);
+    flex:0 0 auto;
   }
-  #logo{
-    display:flex; align-items:center; gap:10px;
-    font-weight:700; letter-spacing:1px; font-size:15px;
-    color:var(--neon); text-shadow:0 0 8px rgba(57,255,136,0.6);
-  }
-  #logo span.sub{
-    display:block; font-size:9px; color:var(--blue); letter-spacing:2px; font-weight:400;
-    text-shadow:0 0 6px rgba(63,208,255,0.6);
-  }
-  .pulse-dot{
-    width:9px; height:9px; border-radius:50%; background:var(--neon);
-    box-shadow:0 0 8px 2px var(--neon);
-    animation:pulseDot 1.2s ease-in-out infinite;
-  }
-  @keyframes pulseDot{0%,100%{opacity:1; transform:scale(1);}50%{opacity:.4; transform:scale(.7);}}
-
-  .header-controls{ display:flex; align-items:center; gap:8px; }
-  .toggle-btn{
-    background:var(--panel); border:1px solid var(--panel-edge); color:var(--text-dim);
-    border-radius:20px; padding:6px 12px; font-size:11px; cursor:pointer;
-    display:flex; align-items:center; gap:6px; transition:.2s;
+  .title{
+    font-size:16px;font-weight:800;color:var(--cream);
+    text-shadow:0 2px 0 rgba(0,0,0,0.35);
+    letter-spacing:0.3px;
+    margin-right:auto;
+    display:flex;align-items:center;gap:6px;
     white-space:nowrap;
   }
-  .toggle-btn:hover{ border-color:var(--blue); color:var(--blue); }
-  .toggle-btn.active{ border-color:var(--neon); color:var(--neon); box-shadow:0 0 10px rgba(57,255,136,0.25); }
-  #muteBtn.muted{ color:var(--danger); border-color:var(--danger); }
+  .title .leaf-emoji{filter:drop-shadow(0 2px 1px rgba(0,0,0,0.3));}
 
-  /* ---------- SIDE PANELS ---------- */
-  .side-panel{
-    position:absolute; top:64px; bottom:14px; z-index:15;
-    width:78px; display:flex; flex-direction:column; gap:8px;
-    padding:10px 6px; overflow-y:auto; scrollbar-width:none;
+  .stat-pill{
+    display:flex;align-items:center;gap:5px;
+    background:rgba(0,0,0,0.24);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:20px;
+    padding:6px 11px;
+    font-weight:700;font-size:13px;color:var(--cream);
+    flex:0 0 auto;
   }
-  .side-panel::-webkit-scrollbar{ display:none; }
-  #leftPanel{ left:10px; }
+  .stat-pill .coin-dot{
+    width:15px;height:15px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #fff6cf, var(--coin) 55%, var(--coin-dark));
+    box-shadow:0 0 4px rgba(255,207,77,0.7), inset 0 0 2px rgba(0,0,0,0.3);
+    flex:0 0 auto;
+  }
+  .lives{display:flex;gap:3px;flex:0 0 auto;}
+  .lives span{font-size:15px;filter:drop-shadow(0 1px 1px rgba(0,0,0,0.4));}
+  .lives span.lost{opacity:0.25;filter:none;}
 
-  .organ-btn{
-    background:var(--panel); border:1px solid var(--panel-edge);
-    border-radius:12px; padding:8px 4px; cursor:pointer; text-align:center;
-    color:var(--text-dim); transition:.2s; position:relative;
+  .icon-btn{
+    width:38px;height:38px;flex:0 0 auto;
+    border-radius:50%;
+    background:linear-gradient(180deg, #fff3d6, #f0dba0);
+    border:2px solid var(--wood-dark);
+    box-shadow:0 3px 0 var(--wood-dark), 0 4px 8px rgba(0,0,0,0.3);
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;cursor:pointer;
+    transition:transform .1s ease, box-shadow .1s ease;
   }
-  .organ-btn:hover{ border-color:var(--blue); color:var(--blue); transform:translateY(-2px); }
-  .organ-btn.selected{
-    border-color:var(--neon); color:var(--neon);
-    box-shadow:0 0 12px rgba(57,255,136,0.35), inset 0 0 8px rgba(57,255,136,0.15);
-  }
-  .organ-btn .icon{ font-size:20px; display:block; margin-bottom:3px; filter:drop-shadow(0 0 3px currentColor);}
-  .organ-btn .label{ font-size:9px; letter-spacing:.5px; line-height:1.2; display:block; }
-  .organ-btn.heart-btn{
-    border-color:var(--danger);
-    background:linear-gradient(160deg, rgba(255,77,109,0.12), var(--panel));
-  }
-  .organ-btn.heart-btn .icon{ color:var(--danger); animation:heartIcon 1.5s ease-in-out infinite; }
-  @keyframes heartIcon{0%,100%{transform:scale(1);}25%{transform:scale(1.18);}40%{transform:scale(1);}55%{transform:scale(1.12);}70%{transform:scale(1);}}
+  .icon-btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--wood-dark), 0 2px 4px rgba(0,0,0,0.3);}
 
-  /* ---------- INFO CARD ---------- */
-  #infoCard{
-    position:absolute; left:50%; bottom:16px; transform:translateX(-50%) translateY(140%);
-    z-index:20; width:min(92%, 480px);
-    background:linear-gradient(160deg, rgba(17,24,35,0.96), rgba(13,17,23,0.96));
-    border:1px solid var(--neon-dim); border-radius:16px;
-    padding:16px 18px; box-shadow:0 0 30px rgba(57,255,136,0.12), 0 10px 40px rgba(0,0,0,0.5);
-    transition:transform .45s cubic-bezier(.2,.9,.25,1), opacity .3s;
-    opacity:0;
+  /* ---------- GAME AREA ---------- */
+  #gameArea{
+    position:relative;flex:1;overflow:hidden;
   }
-  #infoCard.show{ transform:translateX(-50%) translateY(0); opacity:1; }
-  #infoCard .close-x{
-    position:absolute; top:10px; right:12px; cursor:pointer; color:var(--text-dim);
-    font-size:16px; line-height:1;
+  .cloud{
+    position:absolute;background:rgba(255,255,255,0.75);border-radius:50px;
+    filter:blur(0.5px);
   }
-  #infoCard .close-x:hover{ color:var(--danger); }
-  #infoName{
-    font-size:20px; font-weight:700; color:var(--neon); text-shadow:0 0 8px rgba(57,255,136,0.5);
-    margin:0 0 4px 0; display:flex; align-items:center; gap:10px;
+  .cloud::before, .cloud::after{
+    content:'';position:absolute;background:rgba(255,255,255,0.75);border-radius:50%;
   }
-  #infoPronounce{ font-size:12px; color:var(--blue); margin:0 0 8px 0; letter-spacing:.3px; }
-  #infoDesc{ font-size:13.5px; line-height:1.5; color:var(--text); margin:0 0 10px 0; }
-  #listenBtn{
-    background:rgba(63,208,255,0.1); border:1px solid var(--blue-dim); color:var(--blue);
-    border-radius:20px; padding:7px 16px; font-size:12px; cursor:pointer; transition:.2s;
-  }
-  #listenBtn:hover{ background:rgba(63,208,255,0.2); box-shadow:0 0 10px rgba(63,208,255,0.3); }
-
-  /* ---------- LOADER ---------- */
-  #loader{
-    position:absolute; inset:0; z-index:50; background:var(--bg);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
-    transition:opacity .6s ease;
-  }
-  #loader .ring{
-    width:56px; height:56px; border-radius:50%;
-    border:3px solid rgba(57,255,136,0.15); border-top-color:var(--neon);
-    animation:spin 1s linear infinite;
-  }
-  @keyframes spin{to{transform:rotate(360deg);}}
-  #loader p{ color:var(--text-dim); font-size:12px; letter-spacing:2px; }
-
-  /* ---------- HINT ---------- */
-  #hint{
-    position:absolute; top:64px; left:50%; transform:translateX(-50%);
-    z-index:10; font-size:11px; color:var(--text-dim); letter-spacing:.5px;
-    background:rgba(13,17,23,0.6); padding:5px 12px; border-radius:20px;
-    border:1px solid var(--panel-edge); pointer-events:none; transition:opacity .5s;
+  .sun{
+    position:absolute;top:22px;right:26px;width:60px;height:60px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #fffbe0, var(--sun) 60%, #ffdd7a);
+    box-shadow:0 0 40px 14px rgba(255,240,180,0.55);
   }
 
-  /* heartbeat vignette pulse when heart active */
-  #bpmBadge{
-    position:absolute; top:64px; right:16px; z-index:16;
-    background:rgba(255,77,109,0.12); border:1px solid var(--danger); color:#ffb3c0;
-    border-radius:20px; padding:5px 12px; font-size:11px; display:none; align-items:center; gap:6px;
-    letter-spacing:.5px;
+  .fruit{
+    position:absolute;
+    font-size:34px;line-height:1;
+    filter:drop-shadow(0 4px 4px rgba(0,0,0,0.25));
+    will-change:transform, top;
+    pointer-events:none;
+    user-select:none;
   }
-  #bpmBadge.show{ display:flex; }
-  #bpmBadge .dot{ width:7px; height:7px; border-radius:50%; background:var(--danger); box-shadow:0 0 6px var(--danger); animation:pulseDot .75s ease-in-out infinite; }
+  .fruit.golden{
+    filter:drop-shadow(0 0 8px #ffe066) drop-shadow(0 0 16px #ffb703) drop-shadow(0 4px 4px rgba(0,0,0,0.3));
+    animation:goldPulse 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes goldPulse{
+    0%{transform:scale(1) rotate(-4deg);}
+    100%{transform:scale(1.14) rotate(4deg);}
+  }
 
-  /* ---------- RESPONSIVE ---------- */
-  @media (max-width:640px){
-    .side-panel{ width:60px; top:58px; }
-    .organ-btn .label{ font-size:7.5px; }
-    .organ-btn .icon{ font-size:16px; }
-    #logo{ font-size:12px; }
-    #logo span.sub{ font-size:7px; }
-    .toggle-btn{ padding:5px 8px; font-size:9.5px; }
-    #infoName{ font-size:16px; }
-    #infoDesc{ font-size:12px; }
-    #hint{ font-size:9px; top:56px; }
-    #bpmBadge{ top:56px; font-size:9px; padding:4px 8px; }
+  /* ---------- BASKET ---------- */
+  #basketWrap{
+    position:absolute;bottom:14px;left:0;
+    display:flex;flex-direction:column;align-items:center;
+    will-change:transform;
+    pointer-events:none;
+  }
+  .basket{
+    position:relative;
+    height:42px;
+    border-bottom-left-radius:16px;
+    border-bottom-right-radius:16px;
+    box-shadow:0 6px 10px rgba(0,0,0,0.35), inset 0 -6px 10px rgba(0,0,0,0.25), inset 0 4px 6px rgba(255,255,255,0.25);
+  }
+  .basket::before{
+    /* rim */
+    content:'';position:absolute;top:-7px;left:-4px;right:-4px;height:14px;
+    border-radius:10px;
+    box-shadow:0 3px 4px rgba(0,0,0,0.3);
+  }
+  .basket::after{
+    content:'';position:absolute;inset:4px 6px 4px 6px;
+    border-radius:8px;
+    opacity:0.5;
+    background-image:repeating-linear-gradient(115deg, rgba(0,0,0,0.14) 0 3px, transparent 3px 8px);
+  }
+  .basket-compact{ background:linear-gradient(180deg,#c98a4e,#9a5f2c); }
+  .basket-compact::before{ background:linear-gradient(180deg,#e0a25f,#b06a34); }
+
+  .basket-wooden{ background:linear-gradient(180deg,#8a5a35,#5c3a1f); }
+  .basket-wooden::before{ background:linear-gradient(180deg,#a6754a,#754526); }
+
+  .basket-golden{ background:linear-gradient(180deg,#ffe27a,#d69c1f); }
+  .basket-golden::before{ background:linear-gradient(180deg,#fff2b0,#e8b53a); }
+  .basket-golden{ box-shadow:0 6px 10px rgba(0,0,0,0.35), inset 0 -6px 10px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.5), 0 0 14px rgba(255,210,80,0.55); }
+
+  .basket-neon{ background:linear-gradient(180deg,#241033,#0e0518); }
+  .basket-neon::before{ background:linear-gradient(180deg,#3a1a54,#180a24); }
+  .basket-neon{ box-shadow:0 0 16px #b34dff, 0 0 8px #4dffe0, inset 0 -6px 10px rgba(0,0,0,0.5); }
+  .basket-neon::after{ background-image:repeating-linear-gradient(115deg, rgba(180,90,255,0.28) 0 3px, transparent 3px 8px); opacity:0.8;}
+
+  .basket-rainbow{
+    background:linear-gradient(90deg,#ff5d5d,#ffb648,#ffe066,#5cd65c,#4da3ff,#b36bff);
+    background-size:220% 100%;
+    animation:rainbowShift 3s linear infinite;
+  }
+  .basket-rainbow::before{
+    background:linear-gradient(90deg,#ff8a8a,#ffd08a,#fff2a0,#8ee88e,#8fc4ff,#d3a8ff);
+    background-size:220% 100%;
+    animation:rainbowShift 3s linear infinite;
+  }
+  @keyframes rainbowShift{
+    0%{background-position:0% 0;}
+    100%{background-position:220% 0;}
+  }
+
+  /* ---------- START / MODAL OVERLAYS ---------- */
+  .overlay{
+    position:absolute;inset:0;z-index:40;
+    background:rgba(10,14,10,0.72);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+  }
+  .panel{
+    width:100%;max-width:380px;max-height:86%;
+    overflow-y:auto;
+    background:linear-gradient(180deg, #2b3b26, var(--panel));
+    border:2px solid var(--panel-edge);
+    border-radius:20px;
+    padding:22px 20px 20px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.5);
+    text-align:center;
+    color:var(--cream);
+  }
+  .panel h1{margin:4px 0 4px;font-size:24px;font-weight:800;}
+  .panel h2{margin:0 0 14px;font-size:19px;font-weight:800;}
+  .panel p.sub{margin:0 0 18px;color:var(--cream-dim);font-size:13.5px;line-height:1.5;}
+  .big-emoji{font-size:52px;margin-bottom:2px;filter:drop-shadow(0 6px 6px rgba(0,0,0,0.35));}
+
+  .btn{
+    display:inline-block;width:100%;
+    padding:14px 0;margin-top:8px;
+    font-size:15px;font-weight:800;letter-spacing:0.3px;
+    border:none;border-radius:14px;cursor:pointer;
+    color:#152009;
+    background:linear-gradient(180deg,#8fe36a,var(--leaf));
+    box-shadow:0 4px 0 var(--leaf-dark), 0 8px 16px rgba(0,0,0,0.3);
+    transition:transform .1s ease, box-shadow .1s ease;
+  }
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--leaf-dark), 0 3px 8px rgba(0,0,0,0.3);}
+  .btn.secondary{
+    background:linear-gradient(180deg,#f0dba0,var(--coin-dark));
+    box-shadow:0 4px 0 #8a5f0e, 0 8px 16px rgba(0,0,0,0.3);
+  }
+  .btn.secondary:active{box-shadow:0 1px 0 #8a5f0e, 0 3px 8px rgba(0,0,0,0.3);}
+  .btn.ghost{
+    background:rgba(255,255,255,0.06);
+    color:var(--cream);
+    box-shadow:0 4px 0 rgba(0,0,0,0.3);
+    border:1px solid rgba(255,255,255,0.15);
+  }
+
+  .close-x{
+    position:absolute;top:14px;right:16px;
+    width:30px;height:30px;border-radius:50%;
+    background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+    color:var(--cream);font-size:16px;line-height:1;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+
+  /* fruit grid */
+  .fruit-grid{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:6px;
+  }
+  .fruit-opt{
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    padding:12px 6px;border-radius:14px;
+    background:rgba(255,255,255,0.05);
+    border:2px solid transparent;
+    cursor:pointer;
+    transition:background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .fruit-opt:active{transform:scale(0.96);}
+  .fruit-opt .fe{font-size:30px;filter:drop-shadow(0 3px 3px rgba(0,0,0,0.3));}
+  .fruit-opt .fn{font-size:11.5px;color:var(--cream-dim);font-weight:600;}
+  .fruit-opt.selected{
+    border-color:var(--coin);
+    background:rgba(255,207,77,0.14);
+  }
+  .fruit-opt.selected .fn{color:var(--coin);}
+
+  /* basket shop list */
+  .basket-list{display:flex;flex-direction:column;gap:10px;margin-bottom:6px;}
+  .basket-row{
+    display:flex;align-items:center;gap:12px;
+    padding:10px 12px;border-radius:14px;
+    background:rgba(255,255,255,0.05);
+    border:2px solid transparent;
+    text-align:left;
+  }
+  .basket-row.equipped{border-color:var(--leaf);background:rgba(63,220,120,0.1);}
+  .basket-preview{
+    width:56px;height:30px;flex:0 0 auto;position:relative;
+    border-bottom-left-radius:12px;border-bottom-right-radius:12px;
+  }
+  .basket-preview::before{
+    content:'';position:absolute;top:-5px;left:-3px;right:-3px;height:10px;border-radius:8px;
+  }
+  .basket-info{flex:1;min-width:0;}
+  .basket-info .bn{font-size:13.5px;font-weight:800;color:var(--cream);}
+  .basket-info .bd{font-size:11px;color:var(--cream-dim);margin-top:1px;}
+  .basket-action{
+    flex:0 0 auto;
+    padding:8px 12px;border-radius:10px;font-size:12px;font-weight:800;
+    border:none;cursor:pointer;
+    color:#152009;
+    background:linear-gradient(180deg,#8fe36a,var(--leaf));
+  }
+  .basket-action.equipped-tag{
+    background:transparent;color:var(--leaf);border:1px solid var(--leaf);
+    cursor:default;
+  }
+  .basket-action.locked{
+    background:linear-gradient(180deg,#f0dba0,var(--coin-dark));
+    color:#3a2a04;
+  }
+  .basket-action:disabled{opacity:0.5;cursor:default;}
+
+  /* result grid (game over) */
+  .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 20px;}
+  .result-box{
+    background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+    border-radius:12px;padding:10px 6px;
+  }
+  .result-box .k{font-size:10px;color:var(--cream-dim);margin-bottom:3px;letter-spacing:0.3px;}
+  .result-box .v{font-size:18px;font-weight:800;color:var(--cream);}
+  .result-box.best .v{color:var(--coin);}
+
+  .mode-note{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    font-size:12px;color:var(--cream-dim);margin-top:2px;
+  }
+
+  #particleCanvas{
+    position:fixed;inset:0;z-index:50;pointer-events:none;
+  }
+
+  #toast{
+    position:absolute;top:64px;left:50%;transform:translateX(-50%) translateY(-8px);
+    background:rgba(0,0,0,0.55);color:var(--cream);
+    padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;
+    opacity:0;transition:opacity .25s ease, transform .25s ease;
+    z-index:30;pointer-events:none;white-space:nowrap;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media (max-width:360px){
+    .title{font-size:14px;}
+    .icon-btn{width:34px;height:34px;font-size:16px;}
+    .stat-pill{font-size:12px;padding:5px 9px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
   }
 </style>
 </head>
 <body>
+
+<canvas id="particleCanvas"></canvas>
+
 <div id="app">
 
-  <div id="loader">
-    <div class="ring"></div>
-    <p>INITIALIZING ANATOMY LAB…</p>
-  </div>
+  <header>
+    <div class="title"><span class="leaf-emoji">🌿</span>Fruit Catcher</div>
+    <div class="stat-pill"><span class="coin-dot"></span><span id="coinDisplay">0</span></div>
+    <div class="stat-pill">⭐ <span id="scoreDisplay">0</span></div>
+    <div class="lives" id="livesDisplay"></div>
+    <div class="icon-btn" id="btnFruitSelect" title="Choose fruit">🍓</div>
+    <div class="icon-btn" id="btnBasketShop" title="Basket shop">🧺</div>
+  </header>
 
-  <div id="header">
-    <div id="logo">
-      <span class="pulse-dot"></span>
-      <span>
-        BIOLAB 3D
-        <span class="sub" id="headerSub">HUMAN ANATOMY EXPLORER</span>
-      </span>
+  <div id="gameArea">
+    <div class="sun"></div>
+    <div id="basketWrap">
+      <div class="basket basket-compact" id="basketEl"></div>
     </div>
-    <div class="header-controls">
-      <button class="toggle-btn" id="genderBtn">♂ <span id="genderLabel">MALE</span></button>
-      <button class="toggle-btn" id="langBtn">🌐 <span id="langLabel">EN</span></button>
-      <button class="toggle-btn" id="muteBtn">🔊 <span id="muteLabel">SOUND</span></button>
-    </div>
-  </div>
-
-  <div id="hint">Drag to rotate • Scroll / Pinch to zoom • Tap a body part</div>
-  <div id="bpmBadge"><span class="dot"></span><span id="bpmText">80 BPM</span></div>
-
-  <div class="side-panel" id="leftPanel"></div>
-
-  <div id="canvas-holder"></div>
-
-  <div id="infoCard">
-    <span class="close-x" id="closeInfo">✕</span>
-    <h2 id="infoName">—</h2>
-    <p id="infoPronounce">—</p>
-    <p id="infoDesc">—</p>
-    <button id="listenBtn">🔊 Listen</button>
+    <div id="toast"></div>
   </div>
 
 </div>
 
-<script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+<!-- START SCREEN -->
+<div class="overlay" id="startOverlay">
+  <div class="panel">
+    <div class="big-emoji">🍉</div>
+    <h1>Fruit Catcher</h1>
+    <p class="sub">Move the basket to catch fruit falling from the sky. Drag anywhere, or use ← → on desktop. Miss too many and it's game over — golden fruit is a free bonus, no penalty if you miss it!</p>
+    <button class="btn" id="btnPlay">START GAME</button>
+    <div class="mode-note">Coins carry over — spend them in the basket shop 🧺</div>
+  </div>
+</div>
+
+<!-- FRUIT SELECT MODAL -->
+<div class="overlay" id="fruitOverlay" style="display:none;">
+  <div class="panel" style="position:relative;">
+    <div class="close-x" id="closeFruit">✕</div>
+    <h2>Choose Your Fruit</h2>
+    <div class="fruit-grid" id="fruitGrid"></div>
+    <button class="btn" id="doneFruit">DONE</button>
+  </div>
+</div>
+
+<!-- BASKET SHOP MODAL -->
+<div class="overlay" id="basketOverlay" style="display:none;">
+  <div class="panel" style="position:relative;">
+    <div class="close-x" id="closeBasket">✕</div>
+    <h2>Basket Shop</h2>
+    <div class="basket-list" id="basketList"></div>
+    <button class="btn ghost" id="doneBasket">CLOSE</button>
+  </div>
+</div>
+
+<!-- GAME OVER SCREEN -->
+<div class="overlay" id="gameOverOverlay" style="display:none;">
+  <div class="panel">
+    <div class="big-emoji">🧺</div>
+    <h1>Game Over</h1>
+    <p class="sub" id="gameOverSub">The basket ran out of chances.</p>
+    <div class="result-grid">
+      <div class="result-box"><div class="k">SCORE</div><div class="v" id="finalScore">0</div></div>
+      <div class="result-box best"><div class="k">HIGH SCORE</div><div class="v" id="finalHigh">0</div></div>
+      <div class="result-box"><div class="k">COINS EARNED</div><div class="v" id="finalCoinsEarned">0</div></div>
+      <div class="result-box"><div class="k">TOTAL COINS</div><div class="v" id="finalCoinsTotal">0</div></div>
+    </div>
+    <button class="btn" id="btnRestart">PLAY AGAIN</button>
+    <button class="btn secondary" id="btnShopFromOver">VISIT BASKET SHOP</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ================= DATA =================
+  const FRUITS = [
+    {id:'apple', emoji:'🍎', name:'Apple'},
+    {id:'banana', emoji:'🍌', name:'Banana'},
+    {id:'grapes', emoji:'🍇', name:'Grapes'},
+    {id:'watermelon', emoji:'🍉', name:'Watermelon'},
+    {id:'strawberry', emoji:'🍓', name:'Strawberry'},
+    {id:'pineapple', emoji:'🍍', name:'Pineapple'},
+    {id:'mango', emoji:'🥭', name:'Mango'},
+    {id:'peach', emoji:'🍑', name:'Peach'},
+    {id:'cherries', emoji:'🍒', name:'Cherries'},
+    {id:'orange', emoji:'🍊', name:'Orange'}
+  ];
+
+  const BASKETS = [
+    {id:'compact', name:'Compact Basket', desc:'Snug & speedy', cost:0,  width:70,  cls:'basket-compact', previewBg:'linear-gradient(180deg,#c98a4e,#9a5f2c)', previewRim:'linear-gradient(180deg,#e0a25f,#b06a34)'},
+    {id:'wooden',  name:'Wooden Basket',  desc:'Sturdy & wide', cost:25, width:85,  cls:'basket-wooden',  previewBg:'linear-gradient(180deg,#8a5a35,#5c3a1f)', previewRim:'linear-gradient(180deg,#a6754a,#754526)'},
+    {id:'golden',  name:'Golden Woven Basket', desc:'Shiny & roomy', cost:60, width:95, cls:'basket-golden', previewBg:'linear-gradient(180deg,#ffe27a,#d69c1f)', previewRim:'linear-gradient(180deg,#fff2b0,#e8b53a)'},
+    {id:'neon',    name:'Neon Spooky Basket', desc:'Glows in the dark', cost:90, width:90, cls:'basket-neon', previewBg:'linear-gradient(180deg,#241033,#0e0518)', previewRim:'linear-gradient(180deg,#3a1a54,#180a24)'},
+    {id:'rainbow', name:'Rainbow Basket', desc:'Widest catch zone', cost:150, width:100, cls:'basket-rainbow', previewBg:'linear-gradient(90deg,#ff5d5d,#ffb648,#ffe066,#5cd65c,#4da3ff,#b36bff)', previewRim:'linear-gradient(90deg,#ff8a8a,#ffd08a,#fff2a0,#8ee88e,#8fc4ff,#d3a8ff)'}
+  ];
+
+  const MAX_LIVES = 3;
+  const STORAGE_KEY = 'fruitCatcherSaveV1';
+
+  // ================= STATE =================
+  let state = {
+    coins: 0,
+    highScore: 0,
+    unlockedBaskets: ['compact'],
+    equippedBasket: 'compact',
+    selectedFruit: 'strawberry'
+  };
+  loadState();
+
+  let score = 0;
+  let lives = MAX_LIVES;
+  let coinsThisRun = 0;
+  let running = false;
+  let paused = false;
+
+  let gameW = 0, gameH = 0;
+  let basketX = 0;       // center x of basket
+  let basketWidth = 70;
+  let basketY = 0;       // top y of basket catch zone
+
+  let keyLeft = false, keyRight = false;
+  let pointerActive = false;
+
+  let fruits = [];        // {id, el, x, y, size, speed, golden}
+  let fruitIdSeed = 0;
+  let spawnTimer = 0;
+  let spawnInterval = 1100;
+  let fallSpeedBase = 90;  // px per second
+  let elapsed = 0;
+  let lastTime = 0;
+  let rafId = null;
+
+  // ================= DOM =================
+  const gameArea = document.getElementById('gameArea');
+  const basketWrap = document.getElementById('basketWrap');
+  const basketEl = document.getElementById('basketEl');
+  const coinDisplay = document.getElementById('coinDisplay');
+  const scoreDisplay = document.getElementById('scoreDisplay');
+  const livesDisplay = document.getElementById('livesDisplay');
+  const toast = document.getElementById('toast');
+
+  const startOverlay = document.getElementById('startOverlay');
+  const btnPlay = document.getElementById('btnPlay');
+  const gameOverOverlay = document.getElementById('gameOverOverlay');
+  const finalScore = document.getElementById('finalScore');
+  const finalHigh = document.getElementById('finalHigh');
+  const finalCoinsEarned = document.getElementById('finalCoinsEarned');
+  const finalCoinsTotal = document.getElementById('finalCoinsTotal');
+  const gameOverSub = document.getElementById('gameOverSub');
+  const btnRestart = document.getElementById('btnRestart');
+  const btnShopFromOver = document.getElementById('btnShopFromOver');
+
+  const btnFruitSelect = document.getElementById('btnFruitSelect');
+  const fruitOverlay = document.getElementById('fruitOverlay');
+  const fruitGrid = document.getElementById('fruitGrid');
+  const closeFruit = document.getElementById('closeFruit');
+  const doneFruit = document.getElementById('doneFruit');
+
+  const btnBasketShop = document.getElementById('btnBasketShop');
+  const basketOverlay = document.getElementById('basketOverlay');
+  const basketList = document.getElementById('basketList');
+  const closeBasket = document.getElementById('closeBasket');
+  const doneBasket = document.getElementById('doneBasket');
+
+  // ================= STORAGE =================
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        state = Object.assign(state, parsed);
+      }
+    }catch(e){ /* ignore corrupt save */ }
   }
-}
-</script>
-
-<script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
-/* =========================================================
-   DATA — organ / system info (EN + HI)
-========================================================= */
-const DATA = {
-  skull: {
-    icon:'💀', key:'skull',
-    en:{ name:'Skull', pronounce:'Pronunciation: SKUHL', desc:'The skull is a hard bony helmet that protects your brain. It also gives your face its shape!' },
-    hi:{ name:'खोपड़ी', pronounce:'इसे पढ़ें: खोप-ड़ी', desc:'खोपड़ी एक कठोर हड्डी का ढांचा है जो आपके दिमाग की रक्षा करता है और चेहरे को आकार देता है।' }
-  },
-  brain: {
-    icon:'🧠', key:'brain',
-    en:{ name:'Brain', pronounce:'Pronunciation: BRAYN', desc:'The brain is your body\u2019s control center — it helps you think, move, and feel everything around you.' },
-    hi:{ name:'दिमाग', pronounce:'इसे पढ़ें: दि-माग', desc:'दिमाग आपके शरीर का कंट्रोल सेंटर है, यह आपको सोचने, चलने और महसूस करने में मदद करता है।' }
-  },
-  heart: {
-    icon:'❤️', key:'heart',
-    en:{ name:'Heart', pronounce:'Pronunciation: HAART | इसे पढ़ें: हार्ट', desc:'The heart is a strong pump that beats non-stop, pushing blood full of oxygen to every part of your body!' },
-    hi:{ name:'हृदय / दिल', pronounce:'इसे पढ़ें: हृ-दय / दिल', desc:'हृदय एक शक्तिशाली पंप है जो लगातार धड़कता है और ऑक्सीजन भरा खून पूरे शरीर में भेजता है!' }
-  },
-  skeleton: {
-    icon:'🦴', key:'skeleton',
-    en:{ name:'Skeleton', pronounce:'Pronunciation: SKEL-ih-tn', desc:'Your skeleton is made of 206 bones! It gives your body shape and lets you stand tall and move around.' },
-    hi:{ name:'कंकाल', pronounce:'इसे पढ़ें: कं-काल', desc:'आपका कंकाल 206 हड्डियों से बना है! यह शरीर को आकार देता है और आपको खड़े होने में मदद करता है।' }
-  },
-  muscles: {
-    icon:'💪', key:'muscles',
-    en:{ name:'Muscles', pronounce:'Pronunciation: MUHS-uhls', desc:'Muscles are stretchy tissues that pull on your bones so you can run, jump, and even smile!' },
-    hi:{ name:'मांसपेशियां', pronounce:'इसे पढ़ें: मां-स-पे-शि-यां', desc:'मांसपेशियां हड्डियों को खींचती हैं जिससे आप दौड़ सकते हैं, कूद सकते हैं और मुस्कुरा भी सकते हैं!' }
-  },
-  nerves: {
-    icon:'⚡', key:'nerves',
-    en:{ name:'Nerves', pronounce:'Pronunciation: NURVZ', desc:'Nerves are like tiny electric wires that carry messages between your brain and the rest of your body.' },
-    hi:{ name:'तंत्रिकाएं', pronounce:'इसे पढ़ें: तं-त्रि-का-एं', desc:'तंत्रिकाएं छोटे बिजली के तारों की तरह होती हैं जो दिमाग और शरीर के बीच संदेश ले जाती हैं।' }
-  },
-  lungs: {
-    icon:'🫁', key:'lungs',
-    en:{ name:'Lungs', pronounce:'Pronunciation: LUHNGZ', desc:'Your lungs breathe in fresh air and send oxygen into your blood so your whole body can work.' },
-    hi:{ name:'फेफड़े', pronounce:'इसे पढ़ें: फे-फ-ड़े', desc:'फेफड़े ताज़ी हवा अंदर लेते हैं और ऑक्सीजन खून में भेजते हैं ताकि पूरा शरीर काम कर सके।' }
-  },
-  arm: {
-    icon:'💪', key:'arm',
-    en:{ name:'Arm Bones', pronounce:'Pronunciation: AARM BOHNZ', desc:'Arm bones connect at the shoulder and elbow, working like levers so you can lift and grab things.' },
-    hi:{ name:'बांह की हड्डियां', pronounce:'इसे पढ़ें: बांह की हड्डि-यां', desc:'बांह की हड्डियां कंधे और कोहनी से जुड़ती हैं, जिससे आप चीज़ें उठा और पकड़ सकते हैं।' }
-  },
-  leg: {
-    icon:'🦵', key:'leg',
-    en:{ name:'Leg Bones', pronounce:'Pronunciation: LEG BOHNZ', desc:'Your leg bones are the longest and strongest bones — they carry your whole body when you walk or run.' },
-    hi:{ name:'पैर की हड्डियां', pronounce:'इसे पढ़ें: पैर की हड्डि-यां', desc:'आपके पैर की हड्डियां सबसे लंबी और मज़बूत होती हैं, ये चलने-दौड़ने में शरीर को सहारा देती हैं।' }
-  },
-  spine: {
-    icon:'🦴', key:'spine',
-    en:{ name:'Spine', pronounce:'Pronunciation: SPAHYN', desc:'The spine is a stack of small bones that lets you bend and twist, while protecting your nerve cord.' },
-    hi:{ name:'रीढ़ की हड्डी', pronounce:'इसे पढ़ें: री-ढ़ की हड्डी', desc:'रीढ़ की हड्डी छोटी हड्डियों का ढेर है जो आपको झुकने में मदद करती है और तंत्रिका को सुरक्षित रखती है।' }
+  function saveState(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
   }
-};
 
-const SIDEBAR_ITEMS = ['skull','brain','heart','skeleton','muscles','nerves'];
-
-/* =========================================================
-   STATE
-========================================================= */
-let state = {
-  lang: 'en',
-  gender: 'male',
-  muted: false,
-  heartActive: false,
-  selectedKey: null
-};
-
-/* =========================================================
-   BUILD LEFT SIDEBAR BUTTONS
-========================================================= */
-const leftPanel = document.getElementById('leftPanel');
-SIDEBAR_ITEMS.forEach(key=>{
-  const d = DATA[key];
-  const btn = document.createElement('div');
-  btn.className = 'organ-btn' + (key==='heart' ? ' heart-btn':'');
-  btn.dataset.key = key;
-  btn.innerHTML = `<span class="icon">${d.icon}</span><span class="label">${d[state.lang].name}</span>`;
-  btn.addEventListener('click', ()=> selectOrgan(key, true));
-  leftPanel.appendChild(btn);
-});
-
-function refreshSidebarLabels(){
-  document.querySelectorAll('.organ-btn').forEach(btn=>{
-    const key = btn.dataset.key;
-    btn.querySelector('.label').textContent = DATA[key][state.lang].name;
-  });
-}
-
-/* =========================================================
-   THREE.JS SCENE SETUP
-========================================================= */
-const holder = document.getElementById('canvas-holder');
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0d1117);
-scene.fog = new THREE.FogExp2(0x0d1117, 0.028);
-
-const camera = new THREE.PerspectiveCamera(45, holder.clientWidth/holder.clientHeight, 0.1, 200);
-camera.position.set(0, 3.6, 9);
-
-const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(holder.clientWidth, holder.clientHeight);
-renderer.shadowMap.enabled = true;
-holder.appendChild(renderer.domElement);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.minDistance = 1.2;
-controls.maxDistance = 20;
-controls.target.set(0, 3.4, 0);
-controls.update();
-
-/* ---------- lighting: futuristic lab ---------- */
-scene.add(new THREE.AmbientLight(0x334455, 0.9));
-
-const keyLight = new THREE.DirectionalLight(0x9fd8ff, 1.1);
-keyLight.position.set(5, 8, 6);
-keyLight.castShadow = true;
-scene.add(keyLight);
-
-const rimGreen = new THREE.PointLight(0x39ff88, 6, 20);
-rimGreen.position.set(-4, 5, -3);
-scene.add(rimGreen);
-
-const rimBlue = new THREE.PointLight(0x3fd0ff, 5, 20);
-rimBlue.position.set(4, 2, 4);
-scene.add(rimBlue);
-
-/* ---------- lab floor grid ---------- */
-const grid = new THREE.GridHelper(40, 40, 0x1f6a4a, 0x142433);
-grid.position.y = 0;
-grid.material.transparent = true;
-grid.material.opacity = 0.35;
-scene.add(grid);
-
-/* =========================================================
-   MATERIALS
-========================================================= */
-const boneMat = ()=> new THREE.MeshStandardMaterial({ color:0xe9e3d3, roughness:0.55, metalness:0.05 });
-const boneMatF = ()=> new THREE.MeshStandardMaterial({ color:0xf1e6de, roughness:0.5, metalness:0.05 });
-const muscleMat = ()=> new THREE.MeshStandardMaterial({ color:0xb4362f, roughness:0.6, metalness:0.05, transparent:true, opacity:0.55 });
-const organMat = (c)=> new THREE.MeshStandardMaterial({ color:c, roughness:0.35, metalness:0.15, emissive:new THREE.Color(c).multiplyScalar(0.15) });
-const nerveMat = ()=> new THREE.LineBasicMaterial({ color:0xffe14d, transparent:true, opacity:0.85 });
-const skinMat = (c)=> new THREE.MeshStandardMaterial({ color:c, roughness:0.75, metalness:0.02, transparent:true, opacity:0.14 });
-
-const NEON = new THREE.Color(0x39ff88);
-
-/* =========================================================
-   BUILD HUMAN FIGURE
-========================================================= */
-const human = new THREE.Group();
-scene.add(human);
-
-const bones = new THREE.Group(); bones.name='bones';
-const muscles = new THREE.Group(); muscles.name='muscles';
-const nerves = new THREE.Group(); nerves.name='nerves';
-const organs = new THREE.Group(); organs.name='organs';
-const skin = new THREE.Group(); skin.name='skin';
-human.add(bones, muscles, nerves, organs, skin);
-
-// interactive registry: mesh.uuid -> {key, originalEmissive}
-const interactive = new Map();
-
-function registerInteractive(mesh, key){
-  mesh.userData.infoKey = key;
-  interactive.set(mesh.uuid, mesh);
-}
-
-function makeBoneMaterial(){ return state.gender==='female' ? boneMatF() : boneMat(); }
-
-/* ---- Legs ---- */
-function buildLeg(x){
-  const g = new THREE.Group();
-  const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.13,1.5,16), makeBoneMaterial());
-  thigh.position.set(x, 1.65, 0);
-  const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.08,1.4,16), makeBoneMaterial());
-  shin.position.set(x, 0.35, 0);
-  const foot = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.12,0.42), makeBoneMaterial());
-  foot.position.set(x, -0.4, 0.12);
-  [thigh,shin,foot].forEach(m=>{ m.castShadow=true; registerInteractive(m,'leg'); g.add(m); });
-  return g;
-}
-bones.add(buildLeg(-0.32), buildLeg(0.32));
-
-/* ---- Pelvis ---- */
-const pelvis = new THREE.Mesh(new THREE.CapsuleGeometry(0.42,0.25,4,10), makeBoneMaterial());
-pelvis.position.set(0,2.35,0); pelvis.rotation.z = Math.PI/2; pelvis.scale.set(1,0.65,0.8);
-registerInteractive(pelvis,'skeleton'); bones.add(pelvis);
-
-/* ---- Spine ---- */
-const spine = new THREE.Group();
-for(let i=0;i<9;i++){
-  const seg = new THREE.Mesh(new THREE.SphereGeometry(0.1,10,10), makeBoneMaterial());
-  seg.position.set(0, 2.65 + i*0.19, -0.02);
-  registerInteractive(seg,'spine');
-  spine.add(seg);
-}
-bones.add(spine);
-
-/* ---- Ribcage ---- */
-const ribcage = new THREE.Group();
-for(let i=0;i<7;i++){
-  const rib = new THREE.Mesh(new THREE.TorusGeometry(0.55 - i*0.012, 0.028, 8, 24, Math.PI*1.35), makeBoneMaterial());
-  rib.position.set(0, 3.05 + i*0.16, -0.05);
-  rib.rotation.set(Math.PI/2, 0, Math.PI*0.82);
-  rib.castShadow = true;
-  registerInteractive(rib,'skeleton');
-  ribcage.add(rib);
-}
-const sternum = new THREE.Mesh(new THREE.BoxGeometry(0.1,1.1,0.08), makeBoneMaterial());
-sternum.position.set(0, 3.6, 0.5);
-registerInteractive(sternum,'skeleton');
-ribcage.add(sternum);
-bones.add(ribcage);
-
-/* ---- Shoulders + Arms ---- */
-function buildArm(x, sign){
-  const g = new THREE.Group();
-  const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.16,12,12), makeBoneMaterial());
-  shoulder.position.set(x, 4.05, 0);
-  const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.08,1.1,14), makeBoneMaterial());
-  upperArm.position.set(x + sign*0.05, 3.5, 0.05);
-  upperArm.rotation.z = sign * 0.18;
-  const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.075,0.06,1.0,14), makeBoneMaterial());
-  forearm.position.set(x + sign*0.12, 2.5, 0.1);
-  forearm.rotation.z = sign * 0.12;
-  const hand = new THREE.Mesh(new THREE.SphereGeometry(0.11,10,10), makeBoneMaterial());
-  hand.position.set(x + sign*0.16, 1.95, 0.12);
-  [shoulder, upperArm, forearm, hand].forEach(m=>{ m.castShadow=true; registerInteractive(m,'arm'); g.add(m); });
-  return g;
-}
-bones.add(buildArm(-0.62,-1), buildArm(0.62,1));
-
-/* ---- Skull ---- */
-const skullGroup = new THREE.Group();
-const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.32,20,20), makeBoneMaterial());
-cranium.position.set(0,4.62,0); cranium.scale.set(1,1.08,1.05);
-const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.12,0.28), makeBoneMaterial());
-jaw.position.set(0,4.28,0.06);
-const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.14,0.28,14), makeBoneMaterial());
-neck.position.set(0,4.16,0);
-[cranium,jaw,neck].forEach(m=>{ m.castShadow=true; registerInteractive(m,'skull'); skullGroup.add(m); });
-bones.add(skullGroup);
-
-/* ---- Brain (inside skull) ---- */
-const brainMesh = new THREE.Mesh(new THREE.SphereGeometry(0.22,16,16), organMat(0xffb6c1));
-brainMesh.position.set(0,4.66,0.01); brainMesh.scale.set(1,0.9,0.95);
-registerInteractive(brainMesh,'brain');
-organs.add(brainMesh);
-
-/* ---- Lungs ---- */
-function buildLung(x){
-  const lung = new THREE.Mesh(new THREE.SphereGeometry(0.28,14,14), organMat(0xd98a8a));
-  lung.position.set(x,3.65,0.02); lung.scale.set(0.75,1.15,0.85);
-  registerInteractive(lung,'lungs');
-  return lung;
-}
-organs.add(buildLung(-0.32), buildLung(0.32));
-
-/* ---- Heart ---- */
-const heartGroup = new THREE.Group();
-heartGroup.position.set(-0.05, 3.55, 0.28);
-const heartMat = organMat(0xff2d4d);
-const heartTop = new THREE.Mesh(new THREE.SphereGeometry(0.17,16,16), heartMat);
-heartTop.position.set(-0.09,0.06,0);
-const heartTop2 = new THREE.Mesh(new THREE.SphereGeometry(0.17,16,16), heartMat);
-heartTop2.position.set(0.09,0.06,0);
-const heartBottom = new THREE.Mesh(new THREE.ConeGeometry(0.2,0.34,16), heartMat);
-heartBottom.position.set(0,-0.14,0);
-heartBottom.rotation.x = Math.PI;
-[heartTop,heartTop2,heartBottom].forEach(m=>{ m.castShadow = true; registerInteractive(m,'heart'); heartGroup.add(m); });
-organs.add(heartGroup);
-
-/* ---- Muscles overlay (semi-transparent) ---- */
-const torsoMuscle = new THREE.Mesh(new THREE.CapsuleGeometry(0.52,1.3,6,16), muscleMat());
-torsoMuscle.position.set(0,3.55,0); torsoMuscle.scale.set(1,1,0.75);
-registerInteractive(torsoMuscle,'muscles');
-muscles.add(torsoMuscle);
-
-function buildLimbMuscle(x,y,len,r){
-  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r,len,4,10), muscleMat());
-  m.position.set(x,y,0.02);
-  registerInteractive(m,'muscles');
-  return m;
-}
-muscles.add(buildLimbMuscle(-0.32,1.7,1.2,0.19));
-muscles.add(buildLimbMuscle(0.32,1.7,1.2,0.19));
-muscles.add(buildLimbMuscle(-0.66,3.5,0.9,0.14));
-muscles.add(buildLimbMuscle(0.66,3.5,0.9,0.14));
-muscles.visible = false;
-
-/* ---- Nerves overlay (lines) ---- */
-function buildNerveLine(points){
-  const geo = new THREE.BufferGeometry().setFromPoints(points.map(p=>new THREE.Vector3(...p)));
-  const line = new THREE.Line(geo, nerveMat());
-  return line;
-}
-nerves.add(buildNerveLine([[0,4.5,0],[0,3.6,0],[0,2.6,0],[0,2.35,0]])); // spinal cord
-nerves.add(buildNerveLine([[0,2.35,0],[-0.32,1.6,0],[-0.32,0.3,0],[-0.32,-0.3,0.1]]));
-nerves.add(buildNerveLine([[0,2.35,0],[0.32,1.6,0],[0.32,0.3,0],[0.32,-0.3,0.1]]));
-nerves.add(buildNerveLine([[0,3.9,0],[-0.62,3.5,0],[-0.78,2.5,0.1],[-0.78,1.95,0.12]]));
-nerves.add(buildNerveLine([[0,3.9,0],[0.62,3.5,0],[0.78,2.5,0.1],[0.78,1.95,0.12]]));
-nerves.visible = false;
-
-/* ---- Skin silhouette (very subtle, toggled off for skeleton focus) ---- */
-const torsoSkin = new THREE.Mesh(new THREE.CapsuleGeometry(0.58,1.35,6,16), skinMat(0xd8b48a));
-torsoSkin.position.set(0,3.55,0); torsoSkin.scale.set(1,1,0.8);
-skin.add(torsoSkin);
-const headSkin = new THREE.Mesh(new THREE.SphereGeometry(0.36,16,16), skinMat(0xd8b48a));
-headSkin.position.set(0,4.62,0); headSkin.scale.set(1,1.1,1.05);
-skin.add(headSkin);
-
-function applyGenderVisuals(){
-  const tone = state.gender==='female' ? 0xe7c3a4 : 0xd8b48a;
-  torsoSkin.material.color.set(tone);
-  headSkin.material.color.set(tone);
-  torsoSkin.scale.x = state.gender==='female' ? 0.92 : 1;
-  human.scale.setScalar(state.gender==='female' ? 0.96 : 1);
-  bones.children.forEach(c=>{});
-}
-applyGenderVisuals();
-
-/* =========================================================
-   HIGHLIGHT LOGIC
-========================================================= */
-let highlighted = [];
-function clearHighlight(){
-  highlighted.forEach(m=>{
-    if(m.userData.origEmissive !== undefined){
-      m.material.emissive.copy(m.userData.origEmissive);
-      m.material.emissiveIntensity = m.userData.origEmissiveIntensity ?? 1;
+  // ================= AUDIO =================
+  let audioCtx = null;
+  function ensureAudio(){
+    if(!audioCtx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(AC) audioCtx = new AC();
     }
+    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function tone(freq, duration, type, gainPeak, delay){
+    if(!audioCtx) return;
+    const t0 = audioCtx.currentTime + (delay||0);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(gainPeak || 0.16, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.02);
+  }
+  function sfxCatch(){
+    tone(700, 0.08, 'triangle', 0.14);
+    tone(1000, 0.1, 'sine', 0.1, 0.05);
+  }
+  function sfxGolden(){
+    tone(660,0.09,'triangle',0.14); tone(880,0.09,'triangle',0.14,0.07);
+    tone(1100,0.09,'triangle',0.14,0.14); tone(1320,0.14,'triangle',0.15,0.21);
+  }
+  function sfxMiss(){
+    tone(220,0.18,'sawtooth',0.12);
+    tone(150,0.22,'sawtooth',0.1,0.05);
+  }
+  function sfxBuy(){
+    tone(523,0.09,'square',0.11); tone(659,0.09,'square',0.11,0.08); tone(880,0.16,'square',0.13,0.16);
+  }
+  function sfxLocked(){
+    tone(200,0.12,'square',0.1);
+  }
+  function sfxGameOver(){
+    tone(420,0.2,'sawtooth',0.12); tone(320,0.22,'sawtooth',0.11,0.16); tone(220,0.32,'sawtooth',0.1,0.32);
+  }
+
+  // ================= PARTICLES =================
+  const pCanvas = document.getElementById('particleCanvas');
+  const pCtx = pCanvas.getContext('2d');
+  let particles = [];
+  function resizeParticleCanvas(){
+    pCanvas.width = window.innerWidth;
+    pCanvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeParticleCanvas);
+  resizeParticleCanvas();
+
+  function burst(x, y, colors, count, spread){
+    for(let i=0;i<count;i++){
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (0.8 + Math.random()*2.6) * (spread||1);
+      particles.push({
+        x, y,
+        vx: Math.cos(angle)*speed,
+        vy: Math.sin(angle)*speed - 1.2,
+        life: 1,
+        decay: 0.012 + Math.random()*0.014,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        size: 2 + Math.random()*3,
+        shape: Math.random() < 0.5 ? 'circle' : 'rect',
+        rot: Math.random()*Math.PI*2,
+        vrot: (Math.random()-0.5)*0.3
+      });
+    }
+    if(!particleLoopRunning) startParticleLoop();
+  }
+
+  let particleLoopRunning = false;
+  function startParticleLoop(){
+    particleLoopRunning = true;
+    requestAnimationFrame(particleLoop);
+  }
+  function particleLoop(){
+    pCtx.clearRect(0,0,pCanvas.width, pCanvas.height);
+    if(particles.length === 0){ particleLoopRunning = false; return; }
+    for(let i = particles.length - 1; i >= 0; i--){
+      const p = particles[i];
+      p.vy += 0.06;
+      p.x += p.vx; p.y += p.vy; p.rot += p.vrot;
+      p.life -= p.decay;
+      if(p.life <= 0){ particles.splice(i,1); continue; }
+      pCtx.save();
+      pCtx.globalAlpha = Math.max(p.life,0);
+      pCtx.translate(p.x, p.y);
+      pCtx.rotate(p.rot);
+      pCtx.fillStyle = p.color;
+      if(p.shape === 'circle'){
+        pCtx.beginPath(); pCtx.arc(0,0,p.size,0,Math.PI*2); pCtx.fill();
+      } else {
+        pCtx.fillRect(-p.size, -p.size*0.6, p.size*2, p.size*1.2);
+      }
+      pCtx.restore();
+    }
+    requestAnimationFrame(particleLoop);
+  }
+
+  const CONFETTI_COLORS = ['#ff5d5d','#ffb648','#ffe066','#5cd65c','#4da3ff','#b36bff','#ff8fd8'];
+  const GOLD_COLORS = ['#ffe066','#ffcf4d','#ffb703','#fff3c4'];
+
+  // ================= TOAST =================
+  let toastTimer = null;
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1400);
+  }
+
+  // ================= UI: STATS =================
+  function updateHUD(){
+    coinDisplay.textContent = state.coins;
+    scoreDisplay.textContent = score;
+    renderLives();
+  }
+  function renderLives(){
+    let html = '';
+    for(let i=0;i<MAX_LIVES;i++){
+      html += `<span class="${i < lives ? '' : 'lost'}">❤️</span>`;
+    }
+    livesDisplay.innerHTML = html;
+  }
+
+  // ================= FRUIT SELECT MODAL =================
+  function renderFruitGrid(){
+    fruitGrid.innerHTML = '';
+    FRUITS.forEach(f => {
+      const div = document.createElement('div');
+      div.className = 'fruit-opt' + (state.selectedFruit === f.id ? ' selected' : '');
+      div.innerHTML = `<span class="fe">${f.emoji}</span><span class="fn">${f.name}</span>`;
+      div.addEventListener('click', () => {
+        state.selectedFruit = f.id;
+        saveState();
+        renderFruitGrid();
+      });
+      fruitGrid.appendChild(div);
+    });
+  }
+  function currentFruitEmoji(){
+    const f = FRUITS.find(x => x.id === state.selectedFruit);
+    return f ? f.emoji : '🍎';
+  }
+
+  btnFruitSelect.addEventListener('click', () => { renderFruitGrid(); fruitOverlay.style.display = 'flex'; paused = true; });
+  closeFruit.addEventListener('click', () => { fruitOverlay.style.display = 'none'; paused = false; });
+  doneFruit.addEventListener('click', () => { fruitOverlay.style.display = 'none'; paused = false; });
+
+  // ================= BASKET SHOP MODAL =================
+  function renderBasketShop(){
+    basketList.innerHTML = '';
+    BASKETS.forEach(b => {
+      const unlocked = state.unlockedBaskets.includes(b.id);
+      const equipped = state.equippedBasket === b.id;
+      const row = document.createElement('div');
+      row.className = 'basket-row' + (equipped ? ' equipped' : '');
+
+      const preview = document.createElement('div');
+      preview.className = 'basket-preview';
+      preview.style.background = b.previewBg;
+      preview.style.setProperty('--rim', b.previewRim);
+      preview.innerHTML = `<style>.basket-preview::before{background:${b.previewRim};}</style>`;
+      // inline pseudo-el workaround: use a real child instead
+      preview.innerHTML = '';
+      const rim = document.createElement('div');
+      rim.style.position='absolute'; rim.style.top='-5px'; rim.style.left='-3px'; rim.style.right='-3px'; rim.style.height='10px';
+      rim.style.borderRadius='8px'; rim.style.background=b.previewRim;
+      preview.appendChild(rim);
+
+      const info = document.createElement('div');
+      info.className = 'basket-info';
+      info.innerHTML = `<div class="bn">${b.name}</div><div class="bd">${b.desc}${b.cost>0 ? ' · ' + b.cost + ' 🪙' : ' · Free'}</div>`;
+
+      const action = document.createElement('button');
+      action.className = 'basket-action';
+      if(equipped){
+        action.textContent = 'EQUIPPED';
+        action.classList.add('equipped-tag');
+        action.disabled = true;
+      } else if(unlocked){
+        action.textContent = 'EQUIP';
+        action.addEventListener('click', () => {
+          state.equippedBasket = b.id;
+          saveState();
+          applyBasketVisual();
+          renderBasketShop();
+          showToast(`${b.name} equipped!`);
+        });
+      } else {
+        action.textContent = `UNLOCK`;
+        action.classList.add('locked');
+        action.addEventListener('click', () => {
+          if(state.coins >= b.cost){
+            state.coins -= b.cost;
+            state.unlockedBaskets.push(b.id);
+            state.equippedBasket = b.id;
+            saveState();
+            ensureAudio();
+            sfxBuy();
+            applyBasketVisual();
+            updateHUD();
+            renderBasketShop();
+            const rect = basketEl.getBoundingClientRect();
+            burst(rect.left + rect.width/2, rect.top + rect.height/2, CONFETTI_COLORS, 34, 1.3);
+            showToast(`${b.name} unlocked!`);
+          } else {
+            ensureAudio();
+            sfxLocked();
+            showToast(`Need ${b.cost - state.coins} more coins`);
+          }
+        });
+      }
+
+      row.appendChild(preview);
+      row.appendChild(info);
+      row.appendChild(action);
+      basketList.appendChild(row);
+    });
+  }
+
+  btnBasketShop.addEventListener('click', () => { renderBasketShop(); basketOverlay.style.display = 'flex'; paused = true; });
+  closeBasket.addEventListener('click', () => { basketOverlay.style.display = 'none'; paused = false; });
+  doneBasket.addEventListener('click', () => { basketOverlay.style.display = 'none'; paused = false; });
+  btnShopFromOver.addEventListener('click', () => { renderBasketShop(); basketOverlay.style.display = 'flex'; });
+
+  function applyBasketVisual(){
+    const b = BASKETS.find(x => x.id === state.equippedBasket) || BASKETS[0];
+    basketEl.className = 'basket ' + b.cls;
+    basketWidth = b.width;
+    basketEl.style.width = basketWidth + 'px';
+    clampBasket();
+    positionBasket();
+  }
+
+  // ================= LAYOUT =================
+  function resizeGame(){
+    const rect = gameArea.getBoundingClientRect();
+    gameW = rect.width;
+    gameH = rect.height;
+    basketY = gameH - 14 - 42; // bottom offset - basket height
+    clampBasket();
+    positionBasket();
+  }
+  window.addEventListener('resize', resizeGame);
+
+  function clampBasket(){
+    const half = basketWidth/2;
+    if(basketX < half) basketX = half;
+    if(basketX > gameW - half) basketX = gameW - half;
+  }
+  function positionBasket(){
+    basketWrap.style.transform = `translateX(${basketX - basketWidth/2}px)`;
+  }
+
+  // ================= INPUT =================
+  function pointerToBasket(clientX){
+    const rect = gameArea.getBoundingClientRect();
+    basketX = clientX - rect.left;
+    clampBasket();
+    positionBasket();
+  }
+  gameArea.addEventListener('pointerdown', (e) => {
+    if(!running || paused) return;
+    pointerActive = true;
+    pointerToBasket(e.clientX);
   });
-  highlighted = [];
-}
-function highlightMesh(mesh){
-  if(!mesh.material || !mesh.material.emissive) return;
-  if(mesh.userData.origEmissive === undefined){
-    mesh.userData.origEmissive = mesh.material.emissive.clone();
-    mesh.userData.origEmissiveIntensity = mesh.material.emissiveIntensity ?? 1;
-  }
-  mesh.material.emissive.set(NEON);
-  mesh.material.emissiveIntensity = 1.4;
-  highlighted.push(mesh);
-}
-function highlightGroupByKey(key){
-  clearHighlight();
-  interactive.forEach(mesh=>{
-    if(mesh.userData.infoKey === key) highlightMesh(mesh);
+  gameArea.addEventListener('pointermove', (e) => {
+    if(!running || paused || !pointerActive) return;
+    pointerToBasket(e.clientX);
   });
-}
+  window.addEventListener('pointerup', () => { pointerActive = false; });
+  window.addEventListener('pointercancel', () => { pointerActive = false; });
 
-/* =========================================================
-   CAMERA FOCUS ANIMATION
-========================================================= */
-let camAnim = null;
-function focusCamera(targetPos, lookAt, duration=1000){
-  camAnim = {
-    startPos: camera.position.clone(),
-    startTarget: controls.target.clone(),
-    endPos: targetPos.clone(),
-    endTarget: lookAt.clone(),
-    startTime: performance.now(),
-    duration
-  };
-  controls.enabled = false;
-}
-function updateCamAnim(now){
-  if(!camAnim) return;
-  const t = Math.min(1, (now - camAnim.startTime)/camAnim.duration);
-  const ease = t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
-  camera.position.lerpVectors(camAnim.startPos, camAnim.endPos, ease);
-  controls.target.lerpVectors(camAnim.startTarget, camAnim.endTarget, ease);
-  if(t>=1){ camAnim=null; controls.enabled = true; }
-}
-
-const FOCUS_VIEWS = {
-  skull:   { pos:new THREE.Vector3(1.1,4.9,1.6),  look:new THREE.Vector3(0,4.62,0) },
-  brain:   { pos:new THREE.Vector3(0.7,4.85,1.1),  look:new THREE.Vector3(0,4.62,0) },
-  heart:   { pos:new THREE.Vector3(0.6,3.7,1.5),  look:new THREE.Vector3(-0.05,3.55,0.28) },
-  skeleton:{ pos:new THREE.Vector3(0,3.4,7.5),    look:new THREE.Vector3(0,3.2,0) },
-  muscles: { pos:new THREE.Vector3(1.4,3.6,2.6),  look:new THREE.Vector3(0,3.4,0) },
-  nerves:  { pos:new THREE.Vector3(1.2,3.4,2.8),  look:new THREE.Vector3(0,3.0,0) },
-  lungs:   { pos:new THREE.Vector3(0.8,3.75,1.5), look:new THREE.Vector3(0,3.65,0) },
-  arm:     { pos:new THREE.Vector3(1.6,3.4,1.8),  look:new THREE.Vector3(0.62,3.2,0) },
-  leg:     { pos:new THREE.Vector3(1.2,1.4,2.4),  look:new THREE.Vector3(0.32,1.2,0) },
-  spine:   { pos:new THREE.Vector3(1.2,3.6,2.6),  look:new THREE.Vector3(0,3.2,0) }
-};
-
-/* =========================================================
-   AUDIO — heartbeat synth (Web Audio API)
-========================================================= */
-let audioCtx = null;
-let heartInterval = null;
-function ensureAudio(){
-  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if(audioCtx.state === 'suspended') audioCtx.resume();
-}
-function thump(delay, freq, dur, vol){
-  if(state.muted || !audioCtx) return;
-  const t0 = audioCtx.currentTime + delay;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(freq, t0);
-  osc.frequency.exponentialRampToValueAtTime(Math.max(20,freq*0.6), t0+dur);
-  gain.gain.setValueAtTime(0.0001, t0);
-  gain.gain.exponentialRampToValueAtTime(vol, t0+dur*0.18);
-  gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
-  osc.connect(gain).connect(audioCtx.destination);
-  osc.start(t0);
-  osc.stop(t0+dur+0.02);
-}
-function playLubDub(){
-  thump(0, 62, 0.16, 0.55);      // "lub"
-  thump(0.16, 48, 0.14, 0.4);    // "dub"
-}
-const BEAT_MS = 750; // 80 BPM
-function startHeartbeat(){
-  if(heartInterval) return;
-  ensureAudio();
-  playLubDub();
-  heartInterval = setInterval(playLubDub, BEAT_MS);
-  document.getElementById('bpmBadge').classList.add('show');
-}
-function stopHeartbeat(){
-  clearInterval(heartInterval);
-  heartInterval = null;
-  document.getElementById('bpmBadge').classList.remove('show');
-}
-
-/* heart visual pulse driven by clock, synced-ish to BEAT_MS */
-let heartClockStart = performance.now();
-function updateHeartPulse(now){
-  if(!state.heartActive){ heartGroup.scale.setScalar(1); return; }
-  const cyclePos = ((now - heartClockStart) % BEAT_MS) / BEAT_MS;
-  // double-pump envelope: quick expand at 0 and at 0.22 (lub, dub)
-  let s = 1;
-  const pump = (center, width, amt)=>{
-    const d = Math.abs(cyclePos-center);
-    if(d < width){ s += amt * (1 - d/width); }
-  };
-  pump(0.02, 0.09, 0.22);
-  pump(0.22, 0.07, 0.14);
-  heartGroup.scale.setScalar(s);
-}
-
-/* =========================================================
-   INFO CARD
-========================================================= */
-const infoCard = document.getElementById('infoCard');
-const infoName = document.getElementById('infoName');
-const infoPronounce = document.getElementById('infoPronounce');
-const infoDesc = document.getElementById('infoDesc');
-const listenBtn = document.getElementById('listenBtn');
-
-function showInfo(key){
-  const d = DATA[key];
-  if(!d) return;
-  const L = d[state.lang];
-  infoName.innerHTML = `${d.icon} ${L.name}`;
-  infoPronounce.textContent = L.pronounce;
-  infoDesc.textContent = L.desc;
-  infoCard.classList.add('show');
-  state.selectedKey = key;
-}
-document.getElementById('closeInfo').addEventListener('click', ()=>{
-  infoCard.classList.remove('show');
-});
-listenBtn.addEventListener('click', ()=>{
-  if(!state.selectedKey) return;
-  const d = DATA[state.selectedKey];
-  const L = d[state.lang];
-  const utter = new SpeechSynthesisUtterance(L.name);
-  utter.lang = state.lang === 'hi' ? 'hi-IN' : 'en-US';
-  utter.rate = 0.85;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utter);
-});
-
-/* =========================================================
-   SELECT ORGAN (from sidebar or raycast)
-========================================================= */
-function selectOrgan(key, fromSidebar){
-  document.querySelectorAll('.organ-btn').forEach(b=> b.classList.toggle('selected', b.dataset.key===key));
-
-  highlightGroupByKey(key);
-  showInfo(key);
-
-  const view = FOCUS_VIEWS[key] || FOCUS_VIEWS.skeleton;
-  focusCamera(view.pos, view.look, 1100);
-
-  if(key === 'skeleton'){
-    muscles.visible = false; nerves.visible = false;
-  }
-  if(key === 'muscles'){ muscles.visible = true; }
-  if(key === 'nerves'){ nerves.visible = true; }
-
-  if(key === 'heart'){
-    state.heartActive = true;
-    heartClockStart = performance.now();
-    startHeartbeat();
-  } else if(fromSidebar){
-    state.heartActive = false;
-    stopHeartbeat();
-  }
-}
-
-/* =========================================================
-   RAYCASTING — click/tap any body part
-========================================================= */
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
-function onPointerSelect(clientX, clientY){
-  const rect = renderer.domElement.getBoundingClientRect();
-  pointer.x = ((clientX-rect.left)/rect.width)*2 - 1;
-  pointer.y = -((clientY-rect.top)/rect.height)*2 + 1;
-  raycaster.setFromCamera(pointer, camera);
-  const targets = Array.from(interactive.values()).filter(m=>m.visible !== false && m.parent && m.parent.visible !== false);
-  const hits = raycaster.intersectObjects(targets, false);
-  if(hits.length){
-    const mesh = hits[0].object;
-    const key = mesh.userData.infoKey;
-    if(key) selectOrgan(key, true);
-  }
-}
-renderer.domElement.addEventListener('pointerdown', (e)=>{
-  renderer.domElement.dataset.downX = e.clientX;
-  renderer.domElement.dataset.downY = e.clientY;
-});
-renderer.domElement.addEventListener('pointerup', (e)=>{
-  const dx = Math.abs(e.clientX - renderer.domElement.dataset.downX);
-  const dy = Math.abs(e.clientY - renderer.domElement.dataset.downY);
-  if(dx<6 && dy<6){ onPointerSelect(e.clientX, e.clientY); }
-});
-
-/* =========================================================
-   HEADER CONTROLS
-========================================================= */
-const genderBtn = document.getElementById('genderBtn');
-const genderLabel = document.getElementById('genderLabel');
-genderBtn.addEventListener('click', ()=>{
-  state.gender = state.gender==='male' ? 'female' : 'male';
-  genderBtn.firstChild.textContent = state.gender==='male' ? '♂ ' : '♀ ';
-  genderLabel.textContent = state.gender==='male' ? 'MALE' : 'FEMALE';
-  bones.children.forEach(group=>{
-    group.traverse(o=>{ if(o.isMesh) o.material = makeBoneMaterial(); });
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'ArrowLeft') keyLeft = true;
+    if(e.key === 'ArrowRight') keyRight = true;
   });
-  applyGenderVisuals();
-});
+  document.addEventListener('keyup', (e) => {
+    if(e.key === 'ArrowLeft') keyLeft = false;
+    if(e.key === 'ArrowRight') keyRight = false;
+  });
 
-const langBtn = document.getElementById('langBtn');
-const langLabel = document.getElementById('langLabel');
-const headerSub = document.getElementById('headerSub');
-langBtn.addEventListener('click', ()=>{
-  state.lang = state.lang==='en' ? 'hi' : 'en';
-  langLabel.textContent = state.lang==='en' ? 'EN' : 'हिं';
-  headerSub.textContent = state.lang==='en' ? 'HUMAN ANATOMY EXPLORER' : 'मानव शरीर रचना अन्वेषक';
-  refreshSidebarLabels();
-  if(state.selectedKey) showInfo(state.selectedKey);
-});
+  // ================= FRUIT SPAWN / UPDATE =================
+  function spawnFruit(dt){
+    spawnTimer += dt;
+    if(spawnTimer < spawnInterval) return;
+    spawnTimer = 0;
 
-const muteBtn = document.getElementById('muteBtn');
-const muteLabel = document.getElementById('muteLabel');
-muteBtn.addEventListener('click', ()=>{
-  state.muted = !state.muted;
-  muteBtn.classList.toggle('muted', state.muted);
-  muteBtn.firstChild.textContent = state.muted ? '🔇 ' : '🔊 ';
-  muteLabel.textContent = state.muted ? 'MUTED' : 'SOUND';
-  if(state.muted) stopHeartbeat();
-  else if(state.heartActive) startHeartbeat();
-});
+    const isGolden = Math.random() < 0.09;
+    const size = 30 + Math.random()*10;
+    const x = 20 + Math.random() * Math.max(gameW - 40, 10);
+    const speed = fallSpeedBase + Math.random()*40;
 
-/* first user gesture unlocks audio context (browser policy) */
-window.addEventListener('pointerdown', ensureAudio, { once:true });
+    const el = document.createElement('div');
+    el.className = 'fruit' + (isGolden ? ' golden' : '');
+    el.textContent = currentFruitEmoji();
+    el.style.fontSize = size + 'px';
+    el.style.left = x + 'px';
+    el.style.top = '-40px';
+    gameArea.appendChild(el);
 
-/* =========================================================
-   RESIZE
-========================================================= */
-window.addEventListener('resize', ()=>{
-  camera.aspect = holder.clientWidth/holder.clientHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(holder.clientWidth, holder.clientHeight);
-});
+    fruits.push({
+      uid: ++fruitIdSeed,
+      el, x, y: -40,
+      size, speed, golden: isGolden
+    });
+  }
 
-/* =========================================================
-   HINT FADE
-========================================================= */
-setTimeout(()=>{ document.getElementById('hint').style.opacity='0'; }, 6000);
+  function updateFruits(dt){
+    const dtS = dt/1000;
+    for(let i = fruits.length - 1; i >= 0; i--){
+      const f = fruits[i];
+      f.y += f.speed * dtS;
+      f.el.style.top = f.y + 'px';
 
-/* =========================================================
-   LOADER OUT
-========================================================= */
-setTimeout(()=>{
-  const loader = document.getElementById('loader');
-  loader.style.opacity = '0';
-  setTimeout(()=> loader.remove(), 650);
-}, 700);
+      const fruitBottom = f.y + f.size*0.8;
+      const fruitCenterX = f.x + f.size*0.5;
 
-/* =========================================================
-   RENDER LOOP
-========================================================= */
-const clock = new THREE.Clock();
-function animate(){
-  requestAnimationFrame(animate);
-  const now = performance.now();
-  updateCamAnim(now);
-  updateHeartPulse(now);
-  rimGreen.intensity = 5 + Math.sin(now*0.002)*1.5;
-  rimBlue.intensity = 4 + Math.cos(now*0.0017)*1.2;
-  controls.update();
-  renderer.render(scene, camera);
-}
-animate();
+      // catch check
+      if(fruitBottom >= basketY && fruitBottom <= basketY + 30){
+        const half = basketWidth/2;
+        if(fruitCenterX >= basketX - half && fruitCenterX <= basketX + half){
+          catchFruit(f);
+          removeFruit(i);
+          continue;
+        }
+      }
+
+      // missed (past bottom of game area)
+      if(f.y > gameH + 10){
+        missFruit(f);
+        removeFruit(i);
+      }
+    }
+  }
+
+  function removeFruit(index){
+    const f = fruits[index];
+    if(f && f.el && f.el.parentNode) f.el.parentNode.removeChild(f.el);
+    fruits.splice(index, 1);
+  }
+
+  function catchFruit(f){
+    ensureAudio();
+    const rect = basketEl.getBoundingClientRect();
+    const bx = rect.left + rect.width/2;
+    const by = rect.top;
+
+    if(f.golden){
+      score += 20;
+      state.coins += 5;
+      coinsThisRun += 5;
+      sfxGolden();
+      burst(bx, by, GOLD_COLORS, 26, 1.3);
+      showToast('+5 Coins! Golden fruit!');
+    } else {
+      score += 10;
+      state.coins += 1;
+      coinsThisRun += 1;
+      sfxCatch();
+      burst(bx, by, CONFETTI_COLORS, 14, 0.9);
+    }
+    saveState();
+    updateHUD();
+  }
+
+  function missFruit(f){
+    if(f.golden) return; // no penalty for missing bonus fruit
+    ensureAudio();
+    sfxMiss();
+    lives--;
+    updateHUD();
+    gameArea.classList.add('shake');
+    if(lives <= 0){
+      endGame(false);
+    }
+  }
+
+  // ================= DIFFICULTY =================
+  function updateDifficulty(dt){
+    elapsed += dt;
+    const t = elapsed / 1000;
+    fallSpeedBase = 90 + Math.min(t * 2.2, 160);
+    spawnInterval = Math.max(1100 - t * 12, 480);
+  }
+
+  // ================= GAME LOOP =================
+  function loop(ts){
+    if(!running){ return; }
+    if(!lastTime) lastTime = ts;
+    const dt = Math.min(ts - lastTime, 40);
+    lastTime = ts;
+
+    if(!paused){
+      updateDifficulty(dt);
+      spawnFruit(dt);
+      updateFruits(dt);
+
+      if(keyLeft) { basketX -= 0.5 * dt; clampBasket(); positionBasket(); }
+      if(keyRight) { basketX += 0.5 * dt; clampBasket(); positionBasket(); }
+    }
+
+    rafId = requestAnimationFrame(loop);
+  }
+
+  // ================= GAME FLOW =================
+  function startGame(){
+    ensureAudio();
+    score = 0;
+    lives = MAX_LIVES;
+    coinsThisRun = 0;
+    elapsed = 0;
+    spawnTimer = 0;
+    fallSpeedBase = 90;
+    spawnInterval = 1100;
+    lastTime = 0;
+
+    fruits.forEach(f => { if(f.el.parentNode) f.el.parentNode.removeChild(f.el); });
+    fruits = [];
+
+    resizeGame();
+    basketX = gameW/2;
+    clampBasket();
+    positionBasket();
+
+    updateHUD();
+    startOverlay.style.display = 'none';
+    gameOverOverlay.style.display = 'none';
+    running = true;
+    paused = false;
+
+    if(rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function endGame(){
+    running = false;
+    if(rafId) cancelAnimationFrame(rafId);
+    ensureAudio();
+    sfxGameOver();
+
+    if(score > state.highScore){
+      state.highScore = score;
+    }
+    saveState();
+
+    finalScore.textContent = score;
+    finalHigh.textContent = state.highScore;
+    finalCoinsEarned.textContent = coinsThisRun;
+    finalCoinsTotal.textContent = state.coins;
+    gameOverSub.textContent = lives <= 0 ? 'Too many fruits hit the ground.' : 'Run complete.';
+    gameOverOverlay.style.display = 'flex';
+  }
+
+  btnPlay.addEventListener('click', startGame);
+  btnRestart.addEventListener('click', startGame);
+
+  // ================= INIT =================
+  applyBasketVisual();
+  updateHUD();
+  window.addEventListener('resize', resizeGame);
+  resizeGame();
+
+})();
 </script>
 </body>
 </html>
-<!-- Complete Medical Grade 3D Anatomy with Layers & Zoom Control -->
-<div style="width: 100%; height: 700px; background: #0b0f19; border-radius: 12px; overflow: hidden; margin-top: 20px;">
-    <iframe 
-        src="https://human.biodigital.com/viewer/?id=376F&ui-layers=true&ui-tools=true&ui-anatomy-labels=true&ui-search=true&ui-info=true" 
-        width="100%" 
-        height="100%" 
-        style="border: none;" 
-        allowfullscreen="true">
-    </iframe>
-</div>
